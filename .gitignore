@@ -32,6 +32,8 @@
 *.app
 *.dol
 *.elf
+apps/*/*.dol
+apps/*/*.elf
 
 # Build Folder
 /build
