@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+    <name>Wii Pi Calculator Project</name>
+    <coder>MadCatMk2</coder>
+    <version>1.1</version>
+    <release_date>2008-03-23</release_date>
+    <short_description>Pi Calculator for Wii</short_description>
+    <long_description>This application calculates the digits of pi and displays up to 15 decimal places. To exit, use either the reset or power button the Wii.</long_description>
+</app>
