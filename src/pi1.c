@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>  // For usleep() to pause the program
+#include <sys/time.h>  // For gettimeofday for time in milliseconds
 #include <ogcsys.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>  // Wii remote input
@@ -11,7 +13,6 @@ static GXRModeObj *rmode = NULL;  // Structure to store the TV display mode
 
 // Function to initialize the video system and set up the display
 void initialize_video() {
-
     VIDEO_Init();  // Initialize the video system
     PAD_Init();  // Initialize GameCube controller
     WPAD_Init();  // Initialize Wii remotes
@@ -41,7 +42,9 @@ void initialize_video() {
         // If the framebuffer allocation failed, print an error message (if possible)
         // and exit the program since we can't continue without video output
         printf("Failed to allocate framebuffer!\n");
-        exit(1);
+        usleep(3000000);  // Pause for 3 seconds
+        SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Gracefully exit to Homebrew Channel
+        exit(1);  // Fallback if the reset fails
     }
 
     // Initialize the console system, enabling us to print text using printf
@@ -84,39 +87,126 @@ double arctan(double x) {
     return result;  // Return the final result of the arctangent
 }
 
-// Function to calculate Pi using Machin's formula
-void calculate_pi() {
-    // Use Machin's formula for Pi:
-    // Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
-    double pi = 16.0 * arctan(1.0 / 5.0) - 4.0 * arctan(1.0 / 239.0);
-
-    // Print the result of Pi with high precision (50 decimal places)
-    printf("\nPi Calculation Complete!\n");
-    printf("\nPi = %.50lf\n", pi);
+// Legacy Pi calculation method from the original WPCP (numerical integration)
+double calculate_pi_legacy() {
+    double sum = 0.0, a = 10000000.0, x, y, dx = 1.0;
+    // Loop through small intervals to sum up areas under the curve (numerical integration)
+    for (x = dx; x <= a - dx; x += dx) {
+        y = 1.0 / ((a * a) + (x * x));  // Calculate the function at point x
+        sum += (y * dx);  // Approximate the area of small rectangles
+    }
+    sum += ((((1.0 / (a * a)) + (1.0 / (2 * a * a))) / 2.0) * dx);
+    return 4.0 * sum * a;  // Multiply by 4 * a to approximate Pi
 }
 
-// Function to wait for the user to press 'Home' on the Wii Remote or 'Start' on the GameCube controller
-void wait_for_exit() {
+// Function to calculate Pi using Machin's formula
+double calculate_pi_modern() {
+    // Use Machin's formula for Pi:
+    // Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
+    return 16.0 * arctan(1.0 / 5.0) - 4.0 * arctan(1.0 / 239.0);
+}
+
+// Function to time the calculation and print Pi and time taken
+void calculate_and_display_pi(int method) {
+    struct timeval start_time, end_time;  // Structs to store time in seconds and microseconds
+    double pi = 0.0;  // Variable to store the result of the Pi calculation
+
+    // Start the timer
+    gettimeofday(&start_time, NULL);  // Start timing
+
+    // Depending on the method, calculate Pi using the appropriate method
+    if (method == 0) {
+        printf("Calculating Pi using Numerical Integration (Legacy Method)...\n");
+        pi = calculate_pi_legacy();  // Call the legacy method: Numerical Integration
+    } else {
+        printf("Calculating Pi using Machin's Formula (Modern Method)...\n");
+        pi = calculate_pi_modern();  // Call the modern method: Machin's Formula
+    }
+
+    // Stop the timer
+    gettimeofday(&end_time, NULL);  // End timing
+
+    // Calculate the elapsed time in milliseconds
+    double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
+                        (end_time.tv_usec - start_time.tv_usec) / 1000.0;
+
+    // Display the Pi result and handle unrealistic time values
+    printf("\nPi Calculation Complete!\n");
+    printf("Pi = %.50lf\n", pi);  // Display 50 digits of Pi
+
+    if (time_taken <= 0) {
+        printf("Time taken: unknown (possibly due to emulation)\n");
+    } else {
+        printf("Time taken: %.2f milliseconds\n", time_taken);  // Display time taken in milliseconds
+    }
+}
+
+// Function to display the method selection screen with proper names
+int display_selection_screen() {
+    // Clear the screen before showing method selection
+    printf("\x1b[2J");  // ANSI escape code to clear the screen
+    printf("Select Pi Calculation Method:\n");
+    printf("Press Left on the D-pad for Numerical Integration (Legacy Method).\n");
+    printf("Press Right on the D-pad for Machin's Formula (Modern Method).\n");
     printf("\nPress 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n");
 
-    // Loop indefinitely, waiting for user input to exit the program
+    // Wait for the user to select a method or exit
     while (1) {
         PAD_ScanPads();  // Check GameCube controller inputs
-        WPAD_ScanPads();  // Check Wii remote inputs
+        WPAD_ScanPads();  // Check Wii Remote inputs
 
         u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube controller button state
-        u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii remote button state
+        u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii Remote button state
 
         // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
         if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME) {
             // Print exit message and return to the Homebrew Channel
             printf("\nExiting to Homebrew Channel...\n");
-            VIDEO_WaitVSync();  // Wait for a sync to ensure the message is shown
-            SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Return to Homebrew Channel
+            usleep(2000000);  // Pause for 2 seconds
+            SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Gracefully exit to Homebrew Channel
+            exit(1);  // Fallback if the reset fails
         }
 
-        // Sync the video after each frame
-        VIDEO_WaitVSync();
+        // Return 0 if the user selects the Legacy method (Numerical Integration)
+        if (wii_pressed & WPAD_BUTTON_LEFT || gc_pressed & PAD_BUTTON_LEFT) {
+            return 0;
+        }
+
+        // Return 1 if the user selects the Modern method (Machin's Formula)
+        if (wii_pressed & WPAD_BUTTON_RIGHT || gc_pressed & PAD_BUTTON_RIGHT) {
+            return 1;
+        }
+
+        VIDEO_WaitVSync();  // Wait for video sync to handle input smoothly
+    }
+}
+
+// Function to wait for the user to press A to recalculate or exit
+void wait_for_recalculate_or_exit() {
+    printf("\nPress 'A' to calculate Pi again or 'Home'/'Start' to exit.\n");
+
+    while (1) {
+        PAD_ScanPads();  // Check GameCube controller inputs
+        WPAD_ScanPads();  // Check Wii Remote inputs
+
+        u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube controller button state
+        u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii Remote button state
+
+        // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
+        if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME) {
+            // Print exit message and return to the Homebrew Channel
+            printf("\nExiting to Homebrew Channel...\n");
+            usleep(2000000);  // Pause for 2 seconds
+            SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Gracefully exit to Homebrew Channel
+            exit(1);  // Fallback if the reset fails
+        }
+
+        // Recalculate Pi if 'A' is pressed
+        if (wii_pressed & WPAD_BUTTON_A || gc_pressed & PAD_BUTTON_A) {
+            return;
+        }
+
+        VIDEO_WaitVSync();  // Wait for video sync to handle input smoothly
     }
 }
 
@@ -125,11 +215,11 @@ int main(int argc, char **argv) {
     // Initialize the video system and set up the display
     initialize_video();
 
-    // Perform the Pi calculation using Machin's formula
-    calculate_pi();
+    while (1) {
+        int method = display_selection_screen();  // Let the user select the Pi calculation method
+        calculate_and_display_pi(method);  // Calculate and display Pi
+        wait_for_recalculate_or_exit();  // Wait for user input to recalculate or exit
+    }
 
-    // Wait for the user to press the 'Home' or 'Start' button to exit
-    wait_for_exit();
-
-    return 0;
+    return 0;  // The program should never reach here
 }
