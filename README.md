@@ -1,4 +1,4 @@
-# WPCP Wii Pi Calculator
+# WPCP (Wii Pi Calculator Project)
 
 ## Description
 
@@ -17,5 +17,16 @@ WPCP (Wii Pi Calculator Project) is a program by MadCatMk2 that calculates the d
 
 
 > - Rename the compiled dol to boot.dol and place into the apps/WPCP folder
-> - Copy the apps folder and it's contents to an SD card Launch with the Homebrew Channel.
+> - Copy the apps folder and it's contents to an SD card
+> - Insert the SD card into the Wii and launch with the Homebrew Channel.
 > - Wait for the calculations to finish and exit with either the reset or power button the Wii.
+
+&nbsp;
+
+![WPCP 1.1 Screenshot](https://github.com/DeltaResero/WPCPP/blob/main/extras/wpcp_v1-1_screenshot.png?raw=true)
+
+&nbsp;
+
+## Disclaimer
+
+> This application relies on the Homebrew Channel to run. It is not affiliated with, endorsed by, nor sponsored by the creators of the Wii console nor the Homebrew Channel. All trademarks and copyrights are the property of their respective owners.
