@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <malloc.h>
+#include <math.h>
 #include <ogcsys.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>  // Wii remote input
@@ -45,24 +44,24 @@ void initialize_video() {
     if (rmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 }
 
-void calculate_pi() {
-    double keeptrack = 1.0, pi, x, dx, y, sum = 0.0, split;
-    double a = 10000000;
-    dx = 1.0;
-    split = a / 100.0;
+double arctan(double x) {
+    double result = 0.0;
+    double term = x;
+    int n = 1;
 
-    for (x = dx; x <= a - dx; x += dx) {
-        y = 1 / ((a * a) + (x * x));
-        sum += (y * dx);
-
-        if (x >= keeptrack * split) {
-            printf("\n%.0lf of 100 completed.", keeptrack);
-            keeptrack++;
-        }
+    while (fabs(term) > 1e-15) {
+        result += term;
+        n += 2;
+        term *= -x * x * ((n - 2.0) / n);  // Efficient term computation
     }
 
-    sum += ((((1.0 / (a * a)) + (1 / (2 * a * a))) / 2.0) * dx);
-    pi = 4.0 * sum * a;
+    return result;
+}
+
+void calculate_pi() {
+    // Use Machin's formula for Pi:
+    // Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
+    double pi = 16.0 * arctan(1.0 / 5.0) - 4.0 * arctan(1.0 / 239.0);
     printf("\nPi Calculation Complete!\n");
     printf("\nPi = %.50lf\n", pi);
 }
