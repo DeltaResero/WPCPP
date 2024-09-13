@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <unistd.h>  // For usleep() to pause the program
 #include <sys/time.h>  // For gettimeofday for time in milliseconds
@@ -10,6 +11,72 @@
 // Global variables for video setup
 static void *xfb = NULL;  // Framebuffer pointer (where video memory is stored)
 static GXRModeObj *rmode = NULL;  // Structure to store the TV display mode
+
+#define PI_DIGITS 16 // "3" followed by 15 places after the decimal which is limit of float / double
+#define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
+
+// Function to format Pi values into a string
+void format_pi(long double pi_value, char *pi_str) {
+    snprintf(pi_str, TOTAL_LENGTH, "%.15Lf", pi_value);  // Use 'Lf' for long double
+}
+
+// Function to print the mismatch location
+void print_mismatch(const char *calculated_str, const char *actual_str, int mismatch_index) {
+    printf("Actual Pi:     %s\n", actual_str);
+    printf("Calculated Pi: %s\n", calculated_str);
+
+    // Print an arrow pointing to the first mismatch
+    printf("               ");  // Alignment with the calculated Pi output
+    for (int i = 0; i < mismatch_index; ++i) {
+        printf(" ");
+    }
+    printf("^\n");
+
+    printf("First mismatch at digit %d\n", mismatch_index);  // Adjusted for '3.'
+}
+
+// Main comparison function
+void compare_pi_accuracy(long double calculated_pi) {
+    // Handle invalid input
+    if (calculated_pi <= 0.0) {
+        printf("Invalid input: Pi cannot be less than or equal to zero.\n");
+        return;
+    }
+
+    char calculated_str[TOTAL_LENGTH];  // Buffer for calculated Pi string
+    char actual_pi_str[TOTAL_LENGTH];   // Buffer for actual Pi string
+
+    // Format both Pi values to strings
+    format_pi(calculated_pi, calculated_str);
+    format_pi(M_PI, actual_pi_str);  // M_PI is only a double, but should suffice for now
+
+    printf("\nComparing calculated Pi to the actual value of Pi (up to 15 decimal places):\n");
+
+    // Check the '3.' prefix first
+    if (strncmp(calculated_str, "3.", 2) != 0) {
+        print_mismatch(calculated_str, actual_pi_str, 2);
+        printf("Correct digits: 0\n");
+        return;
+    }
+
+    // Compare the digits after the decimal point
+    int mismatch_index = -1;
+    for (int i = 2; i < TOTAL_LENGTH - 1; ++i) {  // TOTAL_LENGTH - 1 avoids null terminator
+        if (calculated_str[i] != actual_pi_str[i]) {
+            mismatch_index = i;
+            break;
+        }
+    }
+
+    // Print results based on comparison
+    if (mismatch_index == -1) {
+        printf("Actual Pi:     %s\n", actual_pi_str);
+        printf("Calculated Pi: %s\n", calculated_str);
+        printf("Correct digits: All %d digits are correct!\n", TOTAL_LENGTH);
+    } else {
+        print_mismatch(calculated_str, actual_pi_str, mismatch_index);
+    }
+}
 
 // Function to initialize the video system and set up the display
 void initialize_video() {
@@ -71,13 +138,13 @@ void initialize_video() {
 }
 
 // Function to compute arctangent using a series approximation (Taylor series)
-double arctan(double x) {
-    double result = 0.0;  // Variable to store the result of the arctan
-    double term = x;  // The first term in the series is x
+long double arctan(long double x) {
+    long double result = 0.0;  // Variable to store the result of the arctan
+    long double term = x;  // The first term in the series is x
     int n = 1;  // The first term uses the odd index n=1
 
     // Continue adding terms to the result while they are larger than a small threshold
-    while (fabs(term) > 1e-15) {
+    while (fabsl(term) > 1e-15L) {
         result += term;  // Add the current term to the result
         n += 2;  // The series alternates with odd numbers (3, 5, 7, ...)
         // Compute the next term efficiently without recalculating powers
@@ -88,8 +155,8 @@ double arctan(double x) {
 }
 
 // Legacy Pi calculation method from the original WPCP (numerical integration)
-double calculate_pi_legacy() {
-    double sum = 0.0, a = 10000000.0, x, y, dx = 1.0;
+long double calculate_pi_legacy() {
+    long double sum = 0.0, a = 10000000.0, x, y, dx = 1.0;
     // Loop through small intervals to sum up areas under the curve (numerical integration)
     for (x = dx; x <= a - dx; x += dx) {
         y = 1.0 / ((a * a) + (x * x));  // Calculate the function at point x
@@ -100,7 +167,7 @@ double calculate_pi_legacy() {
 }
 
 // Function to calculate Pi using Machin's formula
-double calculate_pi_modern() {
+long double calculate_pi_modern() {
     // Use Machin's formula for Pi:
     // Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
     return 16.0 * arctan(1.0 / 5.0) - 4.0 * arctan(1.0 / 239.0);
@@ -109,7 +176,7 @@ double calculate_pi_modern() {
 // Function to time the calculation and print Pi and time taken
 void calculate_and_display_pi(int method) {
     struct timeval start_time, end_time;  // Structs to store time in seconds and microseconds
-    double pi = 0.0;  // Variable to store the result of the Pi calculation
+    long double pi = 0.0;  // Variable to store the result of the Pi calculation
 
     // Start the timer
     gettimeofday(&start_time, NULL);  // Start timing
@@ -130,15 +197,18 @@ void calculate_and_display_pi(int method) {
     double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
                         (end_time.tv_usec - start_time.tv_usec) / 1000.0;
 
-    // Display the Pi result and handle unrealistic time values
+    // Display completion message
     printf("\nPi Calculation Complete!\n");
-    printf("Pi = %.50lf\n", pi);  // Display 50 digits of Pi
 
+    // Handle unrealistic time values
     if (time_taken <= 0) {
         printf("Time taken: unknown (possibly due to emulation)\n");
     } else {
         printf("Time taken: %.2f milliseconds\n", time_taken);  // Display time taken in milliseconds
     }
+
+    // Compare calculated Pi with actual Pi
+    compare_pi_accuracy(pi);
 }
 
 // Function to display the method selection screen with proper names
