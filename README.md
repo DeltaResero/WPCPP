@@ -42,7 +42,7 @@ To set up the devkitPro PowerPC devkitPPC toolchain and build system, follow the
 
 &nbsp;
 
-![WPCP 1.4 Screenshot](https://github.com/DeltaResero/WPCPP/blob/main/extras/wpcp_v1-4_screenshot.png?raw=true)
+![WPCPP 2.0 Screenshot](https://github.com/DeltaResero/WPCPP/blob/main/extras/wpcpp_screenshot.png?raw=true)
 
 &nbsp;
 
