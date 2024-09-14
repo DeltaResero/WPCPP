@@ -2,12 +2,15 @@
 
 ## Description
 
-WPCP (Wii Pi Calculator Project) is a program by MadCatMk2 that calculates the digits of pi (π) on the Wii platform.
-  The program can display up to 15 decimal places of Pi (until someone gets math.h to work).
+> This repository is a continuation fork of the original version 1.1 release of WPCP (Wii Pi Calculator Project) by MadCatMk2 that calculates the digits of pi (π) on the Wii.
+  It has since been modernized and extended for some minor extra functionality. The program can display accurately up to 14 decimal places of Pi using Machin's formula,
+  which is more accurate and allows for slightly more precision than the original numerical integration method.
 
-## Author
+## Limitations
 
-- **MadCatMk2**
+> As the Wii’s floating-point hardware supports only **double precision**,
+  the program can only display up to **14 decimal places of Pi**. To support higher precision, external   libraries like GMP would be required to calculate more decimal places.Although this is possible, it has yet to be implemented.
+
 
 ## Build Instructions
 
@@ -29,4 +32,5 @@ WPCP (Wii Pi Calculator Project) is a program by MadCatMk2 that calculates the d
 
 ## Disclaimer
 
-> This application relies on the Homebrew Channel to run. It is not affiliated with, endorsed by, nor sponsored by the creators of the Wii console nor the Homebrew Channel. All trademarks and copyrights are the property of their respective owners.
+> This application relies on the Homebrew Channel to run. It is not affiliated with, endorsed by, nor sponsored by the creators of the Wii console nor the Homebrew Channel.
+  All trademarks and copyrights are the property of their respective owners.

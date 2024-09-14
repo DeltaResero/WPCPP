@@ -16,8 +16,8 @@ static GXRModeObj *rmode = NULL;  // Structure to store the TV display mode
 #define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
 
 // Function to format Pi values into a string
-void format_pi(long double pi_value, char *pi_str) {
-    snprintf(pi_str, TOTAL_LENGTH, "%.15Lf", pi_value);  // Use 'Lf' for long double
+void format_pi(double pi_value, char *pi_str) {
+    snprintf(pi_str, TOTAL_LENGTH, "%.14lf", pi_value);  // Use 'lf' for double and limit to 14 decimals
 }
 
 // Function to print the mismatch location
@@ -36,7 +36,7 @@ void print_mismatch(const char *calculated_str, const char *actual_str, int mism
 }
 
 // Main comparison function
-void compare_pi_accuracy(long double calculated_pi) {
+void compare_pi_accuracy(double calculated_pi) {
     // Handle invalid input
     if (calculated_pi <= 0.0) {
         printf("Invalid input: Pi cannot be less than or equal to zero.\n");
@@ -48,9 +48,9 @@ void compare_pi_accuracy(long double calculated_pi) {
 
     // Format both Pi values to strings
     format_pi(calculated_pi, calculated_str);
-    format_pi(M_PI, actual_pi_str);  // M_PI is only a double, but should suffice for now
+    format_pi(M_PI, actual_pi_str);  // M_PI is only a double, but this should suffice for now
 
-    printf("\nComparing calculated Pi to the actual value of Pi (up to 15 decimal places):\n");
+    printf("\nComparing calculated Pi to the actual value of Pi (up to 15 decimal places)\n");
 
     // Check the '3.' prefix first
     if (strncmp(calculated_str, "3.", 2) != 0) {
@@ -72,7 +72,7 @@ void compare_pi_accuracy(long double calculated_pi) {
     if (mismatch_index == -1) {
         printf("Actual Pi:     %s\n", actual_pi_str);
         printf("Calculated Pi: %s\n", calculated_str);
-        printf("Correct digits: All %d digits are correct!\n", TOTAL_LENGTH);
+        printf("Correct digits: All %d digits are correct!\n", PI_DIGITS);
     } else {
         print_mismatch(calculated_str, actual_pi_str, mismatch_index);
     }
@@ -138,13 +138,13 @@ void initialize_video() {
 }
 
 // Function to compute arctangent using a series approximation (Taylor series)
-long double arctan(long double x) {
-    long double result = 0.0;  // Variable to store the result of the arctan
-    long double term = x;  // The first term in the series is x
+double arctan(double x) {
+    double result = 0.0;  // Variable to store the result of the arctan
+    double term = x;  // The first term in the series is x
     int n = 1;  // The first term uses the odd index n=1
 
     // Continue adding terms to the result while they are larger than a small threshold
-    while (fabsl(term) > 1e-15L) {
+    while (fabs(term) > 1e-15) {
         result += term;  // Add the current term to the result
         n += 2;  // The series alternates with odd numbers (3, 5, 7, ...)
         // Compute the next term efficiently without recalculating powers
@@ -155,8 +155,8 @@ long double arctan(long double x) {
 }
 
 // Legacy Pi calculation method from the original WPCP (numerical integration)
-long double calculate_pi_legacy() {
-    long double sum = 0.0, a = 10000000.0, x, y, dx = 1.0;
+double calculate_pi_legacy() {
+    double sum = 0.0, a = 10000000.0, x, y, dx = 1.0;
     // Loop through small intervals to sum up areas under the curve (numerical integration)
     for (x = dx; x <= a - dx; x += dx) {
         y = 1.0 / ((a * a) + (x * x));  // Calculate the function at point x
