@@ -9,7 +9,8 @@
 ## Limitations
 
 > As the Wii’s floating-point hardware supports only **double precision**,
-  the program can only display up to **14 decimal places of Pi**. To support higher precision, external   libraries like GMP would be required to calculate more decimal places.Although this is possible, it has yet to be implemented.
+  the program can only display up to **14 decimal places of Pi**. To support higher precision, external
+  libraries like GMP would be required to calculate more decimal places. Although this is possible, it has yet to be implemented.
 
 
 ## Build Instructions
@@ -26,7 +27,7 @@
 
 &nbsp;
 
-![WPCP 1.1 Screenshot](https://github.com/DeltaResero/WPCPP/blob/main/extras/wpcp_v1-1_screenshot.png?raw=true)
+![WPCP 1.1 Screenshot](https://github.com/DeltaResero/WPCPP/blob/main/extras/wpcp_v1-4_screenshot.png?raw=true)
 
 &nbsp;
 

@@ -46,9 +46,11 @@ Thumbs.db
 
 # Miscellaneous temporary files
 #
+*.bak
 *.diff
 *.orig
 *.patch
 *.rej
+*.swp
 *~
 \#*#

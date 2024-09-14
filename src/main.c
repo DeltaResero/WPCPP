@@ -12,7 +12,7 @@
 static void *xfb = NULL;  // Framebuffer pointer (where video memory is stored)
 static GXRModeObj *rmode = NULL;  // Structure to store the TV display mode
 
-#define PI_DIGITS 16  // "3" followed by 15 decimal places which is the precision limit of double
+#define PI_DIGITS 16  // "3." followed by 14 decimal places which is the precision limit of double
 #define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
 
 /**
@@ -70,13 +70,13 @@ void compare_pi_accuracy(double calculated_pi)
   format_pi(calculated_pi, calculated_str);
   format_pi(M_PI, actual_pi_str);  // M_PI from math.h is accurate to 15 decimal places for double
 
-  printf("\nComparing calculated Pi to the actual value of Pi (up to 14 decimal places):\n");
+  printf("\nComparing calculated Pi to the actual value of Pi (up to 14 decimal places)\n");
 
   // Check the '3.' prefix before comparing decimal places
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
     print_mismatch(calculated_str, actual_pi_str, 2);
-    printf("Correct digits: 0\n");
+    printf("None of the %d digits are correct!\n", (PI_DIGITS - 1)); // Minus 1 as a decimal point isn't a number
     return;
   }
 
@@ -96,7 +96,7 @@ void compare_pi_accuracy(double calculated_pi)
   {
     printf("Actual Pi:     %s\n", actual_pi_str);
     printf("Calculated Pi: %s\n", calculated_str);
-    printf("Correct digits: All %d digits are correct!\n", PI_DIGITS);
+    printf("All %d digits are correct!\n", (PI_DIGITS - 1)); // Minus 1 as a decimal point isn't a number
   }
   else  // Print where the first mismatch occurred
   {
