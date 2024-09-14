@@ -1,16 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 #include <unistd.h>  // For usleep() to pause the program
 #include <sys/time.h>  // For gettimeofday for time in milliseconds
 #include <ogcsys.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>  // Wii remote input
 
+using namespace std;  // Use the entire std namespace for simplicity
+
 // Global variables for video setup
-static void *xfb = NULL;  // Framebuffer pointer (where video memory is stored)
-static GXRModeObj *rmode = NULL;  // Structure to store the TV display mode
+static void *xfb = nullptr;  // Framebuffer pointer (where video memory is stored)
+static GXRModeObj *rmode = nullptr;  // Structure to store the TV display mode
 
 #define PI_DIGITS 16  // "3." followed by 14 decimal places which is the precision limit of double
 #define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
@@ -35,17 +38,17 @@ void format_pi(double pi_value, char *pi_str)
  */
 void print_mismatch(const char *calculated_str, const char *actual_str, int mismatch_index)
 {
-  printf("Actual Pi:     %s\n", actual_str);
-  printf("Calculated Pi: %s\n", calculated_str);
+  cout << "Actual Pi:     " << actual_str << endl;
+  cout << "Calculated Pi: " << calculated_str << endl;
 
   // Print an arrow pointing to the first mismatch
-  printf("               ");  // Aligns the arrow with the Pi values
+  cout << "               ";  // Aligns the arrow with the Pi values
   for (int i = 0; i < mismatch_index; ++i)
   {
-    printf(" ");  // Create space for the arrow to point under the mismatched digit
+    cout << " ";  // Create space for the arrow to point under the mismatched digit
   }
-  printf("^\n");
-  printf("First mismatch at digit %d\n", mismatch_index);  // Adjusted for '3.'
+  cout << "^\n";
+  cout << "First mismatch at digit " << mismatch_index << endl;  // Adjusted for '3.'
 }
 
 /**
@@ -58,7 +61,7 @@ void compare_pi_accuracy(double calculated_pi)
   // Handle invalid cases where the Pi value is not valid (this should not happen)
   if (calculated_pi <= 0.0)
   {
-    printf("Invalid input: Pi cannot be less than or equal to zero.\n");
+    cout << "Invalid input: Pi cannot be less than or equal to zero." << endl;
     return;
   }
 
@@ -70,13 +73,13 @@ void compare_pi_accuracy(double calculated_pi)
   format_pi(calculated_pi, calculated_str);
   format_pi(M_PI, actual_pi_str);  // M_PI from math.h is accurate to 15 decimal places for double
 
-  printf("\nComparing calculated Pi to the actual value of Pi (up to 14 decimal places)\n");
+  cout << "\nComparing calculated Pi to the actual value of Pi (up to 14 decimal places)" << endl;
 
   // Check the '3.' prefix before comparing decimal places
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
     print_mismatch(calculated_str, actual_pi_str, 2);
-    printf("None of the %d digits are correct!\n", (PI_DIGITS - 1)); // Minus 1 as a decimal point isn't a number
+    cout << "None of the " << (PI_DIGITS - 1) << " digits are correct!" << endl;  // Minus 1 as a decimal point isn't a number
     return;
   }
 
@@ -94,9 +97,9 @@ void compare_pi_accuracy(double calculated_pi)
   // If there is no mismatch, print results and that all digits are correct
   if (mismatch_index == -1)
   {
-    printf("Actual Pi:     %s\n", actual_pi_str);
-    printf("Calculated Pi: %s\n", calculated_str);
-    printf("All %d digits are correct!\n", (PI_DIGITS - 1)); // Minus 1 as a decimal point isn't a number
+    cout << "Actual Pi:     " << actual_pi_str << endl;
+    cout << "Calculated Pi: " << calculated_str << endl;
+    cout << "All " << (PI_DIGITS - 1) << " digits are correct!" << endl;  // Minus 1 as a decimal point isn't a number
   }
   else  // Print where the first mismatch occurred
   {
@@ -141,7 +144,7 @@ void initialize_video()
   {
     // If the framebuffer allocation failed, print an error message (if possible)
     // and exit the program since we can't continue without video output
-    printf("Failed to allocate framebuffer!\n");
+    cout << "Failed to allocate framebuffer!" << endl;
     usleep(3000000);  // Wait for 3 seconds before exiting
     SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Gracefully exit to Homebrew Channel
     exit(1);  // Fallback if the reset fails
@@ -152,7 +155,6 @@ void initialize_video()
   console_init(xfb, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
   // Set up the video mode and tell the video system where the framebuffer is located
-
   VIDEO_Configure(rmode); // Configure the video mode using the chosen display mode (NTSC, PAL, etc.)
   VIDEO_SetNextFramebuffer(xfb); // Tell the video system where the framebuffer is located
   VIDEO_SetBlack(FALSE);  // Disable the black screen (make display visible)
@@ -235,38 +237,38 @@ void calculate_and_display_pi(int method)
   double pi = 0.0;  // Variable to store the result of the Pi calculation
 
   // Start the timer
-  gettimeofday(&start_time, NULL);
+  gettimeofday(&start_time, nullptr);
 
   // Depending on the selected method, calculate Pi
   if (method == 0)
   {
-    printf("Calculating Pi using Numerical Integration (Legacy Method)...\n");
+    cout << "Calculating Pi using Numerical Integration (Legacy Method)..." << endl;
     pi = calculate_pi_legacy();  // Call the legacy numerical integration method
   }
   else
   {
-    printf("Calculating Pi using Machin's Formula (Modern Method)...\n");
+    cout << "Calculating Pi using Machin's Formula (Modern Method)..." << endl;
     pi = calculate_pi_modern();  // Call the modern Machin's formula method
   }
 
   // Stop the timer
-  gettimeofday(&end_time, NULL);
+  gettimeofday(&end_time, nullptr);
 
   // Calculate the elapsed time in milliseconds
   double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
                       (end_time.tv_usec - start_time.tv_usec) / 1000.0;
 
   // Display the result of the Pi calculation
-  printf("\nPi Calculation Complete!\n");
+  cout << "\nPi Calculation Complete!" << endl;
 
   // Handle unrealistic time values (negative or zero, which may occur in emulation)
   if (time_taken <= 0)
   {
-    printf("Time taken: unknown (possibly due to emulation)\n");
+    cout << "Time taken: unknown (possibly due to emulation)" << endl;
   }
   else
   {
-    printf("Time taken: %.2f millisecond(s)\n", time_taken);  // Display time in milliseconds
+    cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
   }
 
   // Compare the calculated Pi value with the actual Pi value
@@ -282,14 +284,14 @@ void calculate_and_display_pi(int method)
 int display_selection_screen()
 {
   // Clear the screen before displaying the selection menu
-  printf("\x1b[2J");  // ANSI escape code to clear the screen
-  printf("Select Pi Calculation Method:\n");
-  printf("Press Left on the D-pad for Numerical Integration (Legacy Method).\n");
-  printf("Press Right on the D-pad for Machin's Formula (Modern Method).\n");
-  printf("\nPress 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n");
+  cout << "\x1b[2J";  // ANSI escape code to clear the screen
+  cout << "Select Pi Calculation Method:\n";
+  cout << "Press Left on the D-pad for Numerical Integration (Legacy Method).\n";
+  cout << "Press Right on the D-pad for Machin's Formula (Modern Method).\n";
+  cout << "\nPress 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
 
   // Wait for the user to select a method or exit
-  while (1)
+  while (true)
   {
     PAD_ScanPads();  // Check GameCube controller inputs
     WPAD_ScanPads();  // Check Wii Remote inputs
@@ -301,7 +303,7 @@ int display_selection_screen()
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
       // Print exit message and return to the Homebrew Channel
-      printf("\nExiting to Homebrew Channel...\n");
+      cout << "\nExiting to Homebrew Channel..." << endl;
       usleep(2000000);  // Wait for 2 seconds before exiting
       SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Exit to the Homebrew Channel
       exit(1);  // Fallback if the reset fails
@@ -329,9 +331,9 @@ int display_selection_screen()
  */
 void wait_for_recalculate_or_exit()
 {
-  printf("\nPress 'A' to calculate Pi again or 'Home'/'Start' to exit.\n");
+  cout << "\nPress 'A' to calculate Pi again or 'Home'/'Start' to exit." << endl;
 
-  while (1)
+  while (true)
   {
     PAD_ScanPads();  // Check GameCube controller inputs
     WPAD_ScanPads();  // Check Wii Remote inputs
@@ -343,7 +345,7 @@ void wait_for_recalculate_or_exit()
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
       // Print exit message and return to the Homebrew Channel
-      printf("\nExiting to Homebrew Channel...\n");
+      cout << "\nExiting to Homebrew Channel..." << endl;
       usleep(2000000);  // Wait for 2 seconds before exiting
       SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Exit to the Homebrew Channel
       exit(1);  // Fallback if the reset fails
@@ -371,7 +373,7 @@ int main(int argc, char **argv)
   initialize_video();
 
   // Loop until the user exits the program
-  while (1)
+  while (true)
   {
     // Let the user select the Pi calculation method
     int method = display_selection_screen();

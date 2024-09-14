@@ -1,5 +1,6 @@
+# Wii Pi Calculation Project Plus - Makefile
 #---------------------------------------------------------------------------------
-# Clear the implicit built-in rules Wii Pi Calculation Project
+# Clear the implicit built-in rules
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
