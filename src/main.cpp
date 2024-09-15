@@ -178,6 +178,7 @@ double arctan(double x)
 {
   double result = 0.0;  // The result of the arctangent calculation
   double term = x;  // The first term in the series is x
+  double x2 = x * x;  // Precompute x^2 to avoid repetitive multiplication
   int n = 1;  // The first term uses n = 1
 
   // Continue adding terms to the result while they are larger than a small threshold
@@ -185,7 +186,7 @@ double arctan(double x)
   {
     result += term;  // Add the current term to the result
     n += 2;  // Increase n by 2 (since the series uses odd numbers)
-    term *= -x * x * ((n - 2.0) / n);  // Compute the next term efficiently without recalculating powers
+    term *= -x2 * ((n - 2.0) / n);  // Compute the next term efficiently without recalculating powers
   }
 
   return result;  // Return the final result of the arctangent
