@@ -25,6 +25,25 @@ static VideoContext video_ctx = { nullptr, nullptr, false };  // Keep track of v
 #define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
 
 /**
+ * Exits the program and attempts to return to the Homebrew Channel or system menu.
+ * Always waits for 3 seconds before exiting.
+ */
+void exit_WPCPP()
+{
+  // Print exit message
+  cout << "\nExiting to Homebrew Channel..." << endl;
+
+  // Wait for 3 seconds (3000 milliseconds)
+  usleep(3000000);  // 3 seconds in microseconds
+
+  // Reset the system and return to Homebrew Channel (or system menu if Homebrew isn't available)
+  SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+
+  // Fallback in case the system reset fails
+  exit(1);
+}
+
+/**
  * Formats the Pi value into a string with up to 14 decimal places.
  * @param pi_value The Pi value to format.
  * @param pi_str The string buffer where the formatted Pi will be stored.
@@ -150,9 +169,8 @@ void initialize_video()
     // If the framebuffer allocation failed, print an error message (if possible)
     // and exit the program since we can't continue without video output
     cout << "Failed to allocate framebuffer!" << endl;
-    usleep(3000000);  // Wait for 3 seconds before exiting
-    SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Gracefully exit to Homebrew Channel
-    exit(1);  // Fallback if the reset fails
+    usleep(2000000);  // Wait for 2 seconds before calling exit
+    exit_WPCPP();  // Call to exit and reset system
   }
 
   // Initialize the console system to allow printing text
@@ -260,11 +278,7 @@ int display_selection_screen()
     // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
-      // Print exit message and return to the Homebrew Channel
-      cout << "\nExiting to Homebrew Channel..." << endl;
-      usleep(2000000);  // Wait for 2 seconds before exiting
-      SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Exit to the Homebrew Channel
-      exit(1);  // Fallback if the reset fails
+      exit_WPCPP();  // Call to exit and reset system
     }
 
     // Return 0 if the user selects the Legacy method (Numerical Integration)
@@ -302,11 +316,7 @@ void wait_for_recalculate_or_exit()
     // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
-      // Print exit message and return to the Homebrew Channel
-      cout << "\nExiting to Homebrew Channel..." << endl;
-      usleep(2000000);  // Wait for 2 seconds before exiting
-      SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);  // Exit to the Homebrew Channel
-      exit(1);  // Fallback if the reset fails
+      exit_WPCPP();  // Call to exit and reset system
     }
 
     // Recalculate Pi if 'A' is pressed
