@@ -79,27 +79,23 @@ void compare_pi_accuracy(double calculated_pi)
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
     print_mismatch(calculated_str, actual_pi_str, 2);
-    cout << "None of the " << (PI_DIGITS - 1) << " digits are correct!" << endl;  // Minus 1 as a decimal point isn't a number
+    cout << "None of the " << (PI_DIGITS - 1) << " digits are correct!" << endl;
     return;
   }
 
   // Compare the digits after the decimal point
-  int mismatch_index = -1;
-  for (int i = 2; i < TOTAL_LENGTH - 1; ++i)  // Skip the first two characters '3.'
-  {                                           // TOTAL_LENGTH - 1 avoids null terminator
-    if (calculated_str[i] != actual_pi_str[i])
-    {
-      mismatch_index = i;  // First mismatch found
-      break;
-    }
+  int mismatch_index = 2;
+  while (mismatch_index < TOTAL_LENGTH - 1 && calculated_str[mismatch_index] == actual_pi_str[mismatch_index])
+  {
+    ++mismatch_index;
   }
 
   // If there is no mismatch, print results and that all digits are correct
-  if (mismatch_index == -1)
+  if (mismatch_index == TOTAL_LENGTH - 1)
   {
     cout << "Actual Pi:     " << actual_pi_str << endl;
     cout << "Calculated Pi: " << calculated_str << endl;
-    cout << "All " << (PI_DIGITS - 1) << " digits are correct!" << endl;  // Minus 1 as a decimal point isn't a number
+    cout << "All " << (PI_DIGITS - 1) << " digits are correct!" << endl;
   }
   else  // Print where the first mismatch occurred
   {
