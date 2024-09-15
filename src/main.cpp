@@ -11,9 +11,15 @@
 
 using namespace std;  // Use the entire std namespace for simplicity
 
-// Global variables for video setup
-static void *xfb = nullptr;  // Framebuffer pointer (where video memory is stored)
-static GXRModeObj *rmode = nullptr;  // Structure to store the TV display mode
+// Define a context to encapsulate video-related global state
+struct VideoContext {
+  void *xfb;  // Framebuffer pointer
+  GXRModeObj *rmode;  // TV display mode
+  bool initialized;  // Tracks whether the video system is initialized
+};
+
+// Initialize a video context globally
+static VideoContext video_ctx = { nullptr, nullptr, false };  // Keep track of video state in one place
 
 #define PI_DIGITS 16  // "3." followed by 14 decimal places which is the precision limit of double
 #define TOTAL_LENGTH (PI_DIGITS + 2)  // '3.' + 15 decimal places
@@ -110,6 +116,9 @@ void compare_pi_accuracy(double calculated_pi)
  */
 void initialize_video()
 {
+  if (video_ctx.initialized) return;  // Early return if already initialized
+  video_ctx.initialized = true;  // Mark as initialized
+
   VIDEO_Init();  // Initialize the video system
   PAD_Init();  // Initialize GameCube controller input
   WPAD_Init();  // Initialize Wii remote input
@@ -118,25 +127,25 @@ void initialize_video()
   switch (VIDEO_GetCurrentTvMode())
   {
     case VI_NTSC:  // NTSC is common in North America
-      rmode = &TVNtsc480IntDf;
+      video_ctx.rmode = &TVNtsc480IntDf;
       break;
     case VI_PAL:  // PAL is used in Europe and other regions
-      rmode = &TVPal528IntDf;
+      video_ctx.rmode = &TVPal528IntDf;
       break;
     case VI_MPAL:  // MPAL is a variation of PAL used in some regions
-      rmode = &TVMpal480IntDf;
+      video_ctx.rmode = &TVMpal480IntDf;
       break;
     default:  // Default to NTSC if TV mode detection fails
-      rmode = &TVNtsc480IntDf;
+      video_ctx.rmode = &TVNtsc480IntDf;
       break;
   }
 
   // Allocate memory for the framebuffer, used to store video output
   // The framebuffer stores the pixels that will be shown on the screen
-  xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
+  video_ctx.xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(video_ctx.rmode));
 
-  // Check if framebuffer allocation was successful
-  if (!xfb)
+  // If framebuffer allocation fails, handle the error
+  if (!video_ctx.xfb)
   {
     // If the framebuffer allocation failed, print an error message (if possible)
     // and exit the program since we can't continue without video output
@@ -146,19 +155,19 @@ void initialize_video()
     exit(1);  // Fallback if the reset fails
   }
 
-  // Initialize the console system to allow printing text (via printf)
+  // Initialize the console system to allow printing text
   // Parameters: framebuffer, start x/y, width, height, and pitch (row size)
-  console_init(xfb, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
+  console_init(video_ctx.xfb, 20, 20, video_ctx.rmode->fbWidth, video_ctx.rmode->xfbHeight, video_ctx.rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
   // Set up the video mode and tell the video system where the framebuffer is located
-  VIDEO_Configure(rmode); // Configure the video mode using the chosen display mode (NTSC, PAL, etc.)
-  VIDEO_SetNextFramebuffer(xfb); // Tell the video system where the framebuffer is located
+  VIDEO_Configure(video_ctx.rmode);  // Configure the video mode using the chosen display mode (NTSC, PAL, etc.)
+  VIDEO_SetNextFramebuffer(video_ctx.xfb);  // Tell the video system where the framebuffer is located
   VIDEO_SetBlack(FALSE);  // Disable the black screen (make display visible)
   VIDEO_Flush();  // Flush changes to the video system to apply the video configuration
   VIDEO_WaitVSync();  // Wait for the video system to sync and apply changes
 
   // If the TV mode is non-interlaced (progressive scan), wait for another sync
-  if (rmode->viTVMode & VI_NON_INTERLACE)
+  if (video_ctx.rmode->viTVMode & VI_NON_INTERLACE)
   {
     VIDEO_WaitVSync();
   }
@@ -222,55 +231,6 @@ double calculate_pi_modern()
 {
   // Machin's formula: Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
   return 16.0 * arctan(1.0 / 5.0) - 4.0 * arctan(1.0 / 239.0);
-}
-
-/**
- * Times the Pi calculation and prints both the calculated Pi and the time taken.
- * This function measures the time for Pi calculation and compares it to the known value of Pi.
- * @param method The method to use for Pi calculation: 0 for legacy, 1 for modern.
- */
-void calculate_and_display_pi(int method)
-{
-  struct timeval start_time, end_time;  // Structs to store time (seconds and microseconds)
-  double pi = 0.0;  // Variable to store the result of the Pi calculation
-
-  // Start the timer
-  gettimeofday(&start_time, nullptr);
-
-  // Depending on the selected method, calculate Pi
-  if (method == 0)
-  {
-    cout << "Calculating Pi using Numerical Integration (Legacy Method)..." << endl;
-    pi = calculate_pi_legacy();  // Call the legacy numerical integration method
-  }
-  else
-  {
-    cout << "Calculating Pi using Machin's Formula (Modern Method)..." << endl;
-    pi = calculate_pi_modern();  // Call the modern Machin's formula method
-  }
-
-  // Stop the timer
-  gettimeofday(&end_time, nullptr);
-
-  // Calculate the elapsed time in milliseconds
-  double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
-                      (end_time.tv_usec - start_time.tv_usec) / 1000.0;
-
-  // Display the result of the Pi calculation
-  cout << "\nPi Calculation Complete!" << endl;
-
-  // Handle unrealistic time values (negative or zero, which may occur in emulation)
-  if (time_taken <= 0)
-  {
-    cout << "Time taken: unknown (possibly due to emulation)" << endl;
-  }
-  else
-  {
-    cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
-  }
-
-  // Compare the calculated Pi value with the actual Pi value
-  compare_pi_accuracy(pi);
 }
 
 /**
@@ -339,7 +299,7 @@ void wait_for_recalculate_or_exit()
     u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube controller button state
     u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii Remote button state
 
-    // If 'Start' or 'Home' is pressed, exit to the Homebrew Channel
+    // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
       // Print exit message and return to the Homebrew Channel
@@ -350,14 +310,63 @@ void wait_for_recalculate_or_exit()
     }
 
     // Recalculate Pi if 'A' is pressed
-    if (wii_pressed & WPAD_BUTTON_A || gc_pressed & PAD_BUTTON_A)
+    if (gc_pressed & PAD_BUTTON_A || wii_pressed & WPAD_BUTTON_A)
     {
-      return;
+      return;  // Continue and recalculate Pi
     }
 
     // Wait for video sync to handle input smoothly
     VIDEO_WaitVSync();
   }
+}
+
+/**
+ * Times the Pi calculation and prints both the calculated Pi and the time taken.
+ * This function measures the time for Pi calculation and compares it to the known value of Pi.
+ * @param method The method to use for Pi calculation: 0 for legacy, 1 for modern.
+ */
+void calculate_and_display_pi(int method)
+{
+  struct timeval start_time, end_time;  // Structs to store time (seconds and microseconds)
+  double pi = 0.0;  // Variable to store the result of the Pi calculation
+
+  // Start the timer
+  gettimeofday(&start_time, nullptr);
+
+  // Depending on the selected method, calculate Pi
+  if (method == 0)
+  {
+    cout << "Calculating Pi using Numerical Integration (Legacy Method)..." << endl;
+    pi = calculate_pi_legacy();  // Call the legacy numerical integration method
+  }
+  else
+  {
+    cout << "Calculating Pi using Machin's Formula (Modern Method)..." << endl;
+    pi = calculate_pi_modern();  // Call the modern Machin's formula method
+  }
+
+  // Stop the timer
+  gettimeofday(&end_time, nullptr);
+
+  // Calculate the elapsed time in milliseconds
+  double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 +
+                      (end_time.tv_usec - start_time.tv_usec) / 1000.0;
+
+  // Display the result of the Pi calculation
+  cout << "\nPi Calculation Complete!" << endl;
+
+  // Handle unrealistic time values (negative or zero, which may occur in emulation)
+  if (time_taken <= 0)
+  {
+    cout << "Time taken: unknown (possibly due to emulation)" << endl;
+  }
+  else
+  {
+    cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
+  }
+
+  // Compare the calculated Pi value with the actual Pi value
+  compare_pi_accuracy(pi);
 }
 
 /**
