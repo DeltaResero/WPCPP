@@ -201,18 +201,19 @@ double calculate_pi_legacy()
 {
   double sum = 0.0;  // Accumulates the area under the curve
   double a = 10000000.0;  // Large constant to ensure accuracy
+  double a2 = a * a;  // Precompute a^2 to avoid redundant calculations
   double x, y;  // Variables for calculation
   double dx = 1.0;  // Small step size for integration
 
   // Loop through small intervals to sum up areas under the curve
   for (x = dx; x <= a - dx; x += dx)
   {
-    y = 1.0 / ((a * a) + (x * x));  // Calculate the value of the function at point x
+    y = 1.0 / (a2 + (x * x));  // Calculate the value of the function at point x
     sum += (y * dx);  // Approximate the area of small rectangles
   }
 
   // Approximate the remaining area and multiply by 4 to get Pi
-  sum += ((((1.0 / (a * a)) + (1.0 / (2 * a * a))) / 2.0) * dx);
+  sum += ((((1.0 / a2) + (1.0 / (2 * a2))) / 2.0) * dx);
   return 4.0 * sum * a;  // Multiply by 4 * a to approximate Pi
 }
 
