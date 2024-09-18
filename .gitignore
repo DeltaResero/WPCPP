@@ -48,6 +48,7 @@ Thumbs.db
 #
 *.bak
 *.diff
+*.kate-swp
 *.orig
 *.patch
 *.rej

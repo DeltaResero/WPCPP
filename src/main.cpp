@@ -44,14 +44,15 @@ void exit_WPCPP()
 }
 
 /**
- * Formats the Pi value into a string with up to 14 decimal places.
+ * Formats the Pi value into a string with a specified number of decimal places.
  * @param pi_value The Pi value to format.
  * @param pi_str The string buffer where the formatted Pi will be stored.
+ * @param precision Number of decimal places to format Pi.
  */
-void format_pi(double pi_value, char *pi_str)
+void format_pi(double pi_value, char *pi_str, int precision)
 {
-  // Use 'lf' for double, limiting the precision to 14 decimal places.
-  snprintf(pi_str, TOTAL_LENGTH, "%.14lf", pi_value);
+  // FIXME: Use 'lf' for double, limiting the precision to a max of 14 decimal places for now.
+  snprintf(pi_str, TOTAL_LENGTH, "%.*lf", precision, pi_value); // Format Pi to 'precision' number of decimal places
 }
 
 /**
@@ -62,26 +63,28 @@ void format_pi(double pi_value, char *pi_str)
  * @param mismatch_index The index where the mismatch occurs.
  */
 void print_mismatch(const char *calculated_str, const char *actual_str, int mismatch_index)
-{
+{ // Method assumes "3." to be correct and handled elsewhere as special cases
   cout << "Actual Pi:     " << actual_str << endl;
   cout << "Calculated Pi: " << calculated_str << endl;
 
   // Print an arrow pointing to the first mismatch
   cout << "               ";  // Aligns the arrow with the Pi values
-  for (int i = 0; i < mismatch_index; ++i)
+  for (int i = 0; i < mismatch_index; ++i) // offset for the decimal point
   {
     cout << " ";  // Create space for the arrow to point under the mismatched digit
   }
+  // Output an arrow at the location of mismatch
   cout << "^\n";
-  cout << "First mismatch at digit " << mismatch_index << endl;  // Adjusted for '3.'
+  cout << "First mismatch at: " << (mismatch_index - 1) << " digit(s) after the decimal" << endl;
 }
 
 /**
- * Compares the calculated Pi value with the actual Pi value (up to 14 decimal places).
+ * Compares the calculated Pi value with the actual Pi value (up to the specified precision).
  * This function prints the comparison result and identifies the first mismatched digit, if any.
  * @param calculated_pi The Pi value calculated by the program.
+ * @param precision The number of decimal places to compare.
  */
-void compare_pi_accuracy(double calculated_pi)
+void compare_pi_accuracy(double calculated_pi, int precision)
 {
   // Handle invalid cases where the Pi value is not valid (this should not happen)
   if (calculated_pi <= 0.0)
@@ -95,35 +98,37 @@ void compare_pi_accuracy(double calculated_pi)
   char actual_pi_str[TOTAL_LENGTH];
 
   // Format the Pi values into strings
-  format_pi(calculated_pi, calculated_str);
-  format_pi(M_PI, actual_pi_str);  // M_PI from math.h is accurate to 15 decimal places for double
+  format_pi(calculated_pi, calculated_str, precision);
+  format_pi(M_PI, actual_pi_str, precision);  // FIXME: M_PI from math.h is only accurate to 15 decimal places
 
-  cout << "\nComparing calculated Pi to the actual value of Pi (up to 14 decimal places)" << endl;
+  cout << "Comparing calculated Pi to the actual value of Pi (up to " << precision << " decimal places)" << endl;
 
-  // Check the '3.' prefix before comparing decimal places
+  // Check if the first 2 characters are '3.' before comparing decimal places
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
-    print_mismatch(calculated_str, actual_pi_str, 2);
-    cout << "None of the " << (PI_DIGITS - 1) << " digits are correct!" << endl;
+    // Should not normally end up here
+    cout << "None of the digits are correct!" << endl;
     return;
   }
 
   // Compare the digits after the decimal point
   int mismatch_index = 2;
-  while (mismatch_index < TOTAL_LENGTH - 1 && calculated_str[mismatch_index] == actual_pi_str[mismatch_index])
+  while (mismatch_index < precision + 2 && calculated_str[mismatch_index] == actual_pi_str[mismatch_index])
   {
     ++mismatch_index;
   }
 
   // If there is no mismatch, print results and that all digits are correct
-  if (mismatch_index == TOTAL_LENGTH - 1)
+  if (mismatch_index == precision + 2)
   {
+    // No mismatches
     cout << "Actual Pi:     " << actual_pi_str << endl;
     cout << "Calculated Pi: " << calculated_str << endl;
-    cout << "All " << (PI_DIGITS - 1) << " digits are correct!" << endl;
+    cout << "All " << precision << " digit(s) after the decimal are correct!" << endl;
   }
-  else  // Print where the first mismatch occurred
+  else
   {
+    // Print where the first mismatch occurred
     print_mismatch(calculated_str, actual_pi_str, mismatch_index);
   }
 }
@@ -235,9 +240,9 @@ double calculate_pi_legacy()
     sum += (y * dx);  // Approximate the area of small rectangles
   }
 
-  // Approximate the remaining area and multiply by 4 to get Pi
+  // Approximate the remaining area and multiply by 4 to approximate Pi
   sum += ((((1.0 / a2) + (1.0 / (2 * a2))) / 2.0) * dx);
-  return 4.0 * sum * a;  // Multiply by 4 * a to approximate Pi
+  return 4.0 * sum * a;
 }
 
 /**
@@ -252,45 +257,81 @@ double calculate_pi_modern()
 }
 
 /**
- * Displays the method selection screen for the user.
- * The user can choose between two methods for Pi calculation: legacy (numerical integration)
- * and modern (Machin's formula).
- * @return Returns 0 for the legacy method or 1 for the modern method.
+ * Displays a menu and allows the user to navigate and select options.
+ * The options are navigated using Left/Right on the D-pad, and 'A' selects the option.
+ * @return The index of the selected option.
  */
 int display_selection_screen()
 {
   // Clear the screen before displaying the selection menu
   cout << "\x1b[2J";  // ANSI escape code to clear the screen
+
+  string pi_methods[] = {
+    "Numerical Integration (Legacy Method)",
+    "Machin's Formula (Modern Method)"
+  };
+  int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);
+  int selected_index = 0;
+
+  bool button_right_last = false;
+  bool button_left_last = false;
+  bool button_a_last = false;  // Track last state of 'A' button to handle debounce
+
+  cout << "\x1b[2J";
   cout << "Select Pi Calculation Method:\n";
-  cout << "Press Left on the D-pad for Numerical Integration (Legacy Method).\n";
-  cout << "Press Right on the D-pad for Machin's Formula (Modern Method).\n";
-  cout << "\nPress 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
+  cout << "Use Left/Right on the D-pad to navigate.\n";
+  cout << "Press 'A' to confirm.\n";
+  cout << "Press 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
 
   // Wait for the user to select a method or exit
   while (true)
   {
-    PAD_ScanPads();  // Check GameCube controller inputs
-    WPAD_ScanPads();  // Check Wii Remote inputs
+    PAD_ScanPads();  // GameCube controller
+    WPAD_ScanPads(); // Wii Remote
 
-    u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube controller button state
-    u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii Remote button state
+    u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube button state
+    u32 wii_pressed = WPAD_ButtonsDown(0); // Wii button state
+    VIDEO_WaitVSync();  // Prevent ghost inputs
 
-    // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
+    bool button_right_down = (wii_pressed & WPAD_BUTTON_RIGHT) || (gc_pressed & PAD_BUTTON_RIGHT);
+    bool button_left_down = (wii_pressed & WPAD_BUTTON_LEFT) || (gc_pressed & PAD_BUTTON_LEFT);
+    bool button_a_down = (gc_pressed & PAD_BUTTON_A) || (wii_pressed & WPAD_BUTTON_A);
+
+    // Navigate Right
+    if (button_right_down && !button_right_last)
+    {
+      if (selected_index < num_methods - 1)
+      {
+        selected_index++;
+      }
+    }
+
+    // Navigate Left
+    if (button_left_down && !button_left_last)
+    {
+      if (selected_index > 0)
+      {
+        selected_index--;
+      }
+    }
+
+    button_right_last = button_right_down;
+    button_left_last = button_left_down;
+
+    cout << "\rCurrently Selected: " << pi_methods[selected_index] << "      \r";
+
+    // A button is pressed to select method
+    if (button_a_down && !button_a_last)
+    {
+      return selected_index;
+    }
+
+    button_a_last = button_a_down;
+
+    // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed
     if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
     {
-      exit_WPCPP();  // Call to exit and reset system
-    }
-
-    // Return 0 if the user selects the Legacy method (Numerical Integration)
-    if (wii_pressed & WPAD_BUTTON_LEFT || gc_pressed & PAD_BUTTON_LEFT)
-    {
-      return 0;
-    }
-
-    // Return 1 if the user selects the Modern method (Machin's Formula)
-    if (wii_pressed & WPAD_BUTTON_RIGHT || gc_pressed & PAD_BUTTON_RIGHT)
-    {
-      return 1;
+      exit_WPCPP();  // Exit the program and return to the system menu
     }
 
     // Wait for video sync to handle input smoothly
@@ -299,46 +340,114 @@ int display_selection_screen()
 }
 
 /**
- * Waits for the user to press 'A' to recalculate Pi or 'Home/Start' to exit.
+ * Displays a precision selection screen to allow the user to choose the number
+ * of decimal places for the Pi calculation.
+ * @return The selected precision (between 1 and 14 decimal places).
  */
-void wait_for_recalculate_or_exit()
+int display_precision_selection_screen()
 {
-  cout << "\nPress 'A' to calculate Pi again or 'Home'/'Start' to exit." << endl;
+  int precision = 14;  // Start with maximum precision
+  int step_size = 1;  // Default step size is 1 (i.e., move by 1 digit at a time)
+  bool button_a_last = false;
+  bool button_l_last = false;
+  bool button_r_last = false;
+  bool button_left_last = false;
+  bool button_right_last = false;
+
+  cout << "\x1b[2J";
+  cout << "Select Pi Precision (1-14 decimal places):\n";
+  cout << "Use Left/Right on the D-pad to adjust.\n";
+  cout << "Press 'L'/'R' or '-'/'+' to change the stepping size.\n";
+  cout << "Press 'A' to confirm.\n";
 
   while (true)
   {
-    PAD_ScanPads();  // Check GameCube controller inputs
-    WPAD_ScanPads();  // Check Wii Remote inputs
+    PAD_ScanPads();  // GameCube controller
+    WPAD_ScanPads();  // Wii Remote
+    u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube button state
+    u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii button state
+    VIDEO_WaitVSync();  // Prevent ghost inputs
 
-    u32 gc_pressed = PAD_ButtonsDown(0);  // GameCube controller button state
-    u32 wii_pressed = WPAD_ButtonsDown(0);  // Wii Remote button state
+    bool button_l_down = (gc_pressed & PAD_TRIGGER_L) || (wii_pressed & WPAD_BUTTON_MINUS);
+    bool button_r_down = (gc_pressed & PAD_TRIGGER_R) || (wii_pressed & WPAD_BUTTON_PLUS);
+    bool button_a_down = (gc_pressed & PAD_BUTTON_A) || (wii_pressed & WPAD_BUTTON_A);
+    bool button_left_down = (gc_pressed & PAD_BUTTON_LEFT) || (wii_pressed & WPAD_BUTTON_LEFT);
+    bool button_right_down = (gc_pressed & PAD_BUTTON_RIGHT) || (wii_pressed & WPAD_BUTTON_RIGHT);
 
-    // Check if the 'Start' button (GameCube) or 'Home' button (Wii Remote) is pressed
-    if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
+    // Adjust stepping size with L triggers or - button
+    if (button_l_down && !button_l_last)
     {
-      exit_WPCPP();  // Call to exit and reset system
+      if (step_size > 1)
+      {
+        step_size /= 10;  // Reduce step size (go to smaller step)
+      }
     }
 
-    // Recalculate Pi if 'A' is pressed
-    if (gc_pressed & PAD_BUTTON_A || wii_pressed & WPAD_BUTTON_A)
+    // Adjust stepping size with R trigger or + button
+    if (button_r_down && !button_r_last)
     {
-      return;  // Continue and recalculate Pi
+      if (step_size < 10)
+      {
+        step_size *= 10;  // Increase step size (go to larger step)
+      }
     }
+
+    // Adjust precision using Left D-pad with current step size
+    if (button_left_down && !button_left_last)
+    {
+      if (precision - step_size >= 1)
+      {
+        precision -= step_size;  // Decrease precision by the step size
+      }
+    }
+
+    // Adjust precision using Right D-pad with current step size
+    if (button_right_down && !button_right_last)
+    {
+      if (precision + step_size <= 14)
+      {
+        precision += step_size;  // Increase precision by the step size
+      }
+    }
+
+    // Update last button states
+    button_l_last = button_l_down;
+    button_r_last = button_r_down;
+    button_left_last = button_left_down;
+    button_right_last = button_right_down;
+
+    // Display current precision and step size
+    cout << "\rCurrent Precision: " << precision << " decimal places  (Step Size: " << step_size << ")     \r";
+
+    if (button_a_down && !button_a_last)
+    {
+      return precision;  // Confirm selection with 'A'
+    }
+
+    button_a_last = button_a_down;
 
     // Wait for video sync to handle input smoothly
     VIDEO_WaitVSync();
   }
 }
+
 
 /**
  * Times the Pi calculation and prints both the calculated Pi and the time taken.
  * This function measures the time for Pi calculation and compares it to the known value of Pi.
  * @param method The method to use for Pi calculation: 0 for legacy, 1 for modern.
+ * @param precision The number of decimal places for the Pi calculation.
  */
-void calculate_and_display_pi(int method)
+void calculate_and_display_pi(int method, int precision)
 {
+  // Clear the screen before displaying the results
+  cout << "\x1b[2J";  // ANSI escape code to clear the screen
+
+  // Output precision level before starting
+  cout << "Precision level set to: " << precision << " decimal place(s)" << endl;
+
   struct timeval start_time, end_time;  // Structs to store time (seconds and microseconds)
-  double pi = 0.0;  // Variable to store the result of the Pi calculation
+  double pi = 0.0;  // FIXME: Variable to store the result of the Pi calculation currently limited by double
 
   // Start the timer
   gettimeofday(&start_time, nullptr);
@@ -375,8 +484,22 @@ void calculate_and_display_pi(int method)
     cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
   }
 
-  // Compare the calculated Pi value with the actual Pi value
-  compare_pi_accuracy(pi);
+  // Call function to display and compare calculated results to expected results
+  compare_pi_accuracy(pi, precision);
+
+  cout << "Press any button to return to the menu." << endl;
+  while (true)
+  {
+    PAD_ScanPads();
+    WPAD_ScanPads();
+    u32 gc_pressed = PAD_ButtonsDown(0);
+    u32 wii_pressed = WPAD_ButtonsDown(0);
+    if (gc_pressed || wii_pressed)
+    {
+      break;
+    }
+    VIDEO_WaitVSync();
+  }
 }
 
 /**
@@ -392,14 +515,11 @@ int main(int argc, char **argv)
   // Loop until the user exits the program
   while (true)
   {
-    // Let the user select the Pi calculation method
+    // Let the user select the Pi calculation method and level of precision
     int method = display_selection_screen();
+    int precision = display_precision_selection_screen();
 
-    // Calculate and display Pi using the selected method
-    calculate_and_display_pi(method);
-
-    // Wait for the user to choose to recalculate or exit
-    wait_for_recalculate_or_exit();
+    calculate_and_display_pi(method, precision);
   }
 
   return 0;  // The program should never reach here
