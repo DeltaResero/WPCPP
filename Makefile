@@ -27,12 +27,14 @@ INCLUDES     :=
 LIBOGC_INC   :=  $(DEVKITPRO)/libogc/include
 LIBOGC_LIB   :=  $(DEVKITPRO)/libogc/lib/wii
 PORTLIBS     :=  $(DEVKITPRO)/portlibs/wii
+GMP_PATH     :=  $(CURDIR)/third_party/gmp
 
 #---------------------------------------------------------------------------------
 # Compiler and tools
 #---------------------------------------------------------------------------------
 
 CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc
+CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++
 STRIP = $(DEVKITPPC)/bin/powerpc-eabi-strip
 
 #---------------------------------------------------------------------------------
@@ -47,14 +49,13 @@ LDFLAGS     :=  -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # Any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS        :=  -lwiiuse -lbte -logc -lm -L$(PORTLIBS)/lib
+LIBS        :=  -lwiiuse -lbte -logc -lm -lgmp -lgmpxx
 
 #---------------------------------------------------------------------------------
 # List of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS     :=  -L$(LIBOGC_LIB) -L$(PORTLIBS)
-
+LIBDIRS     :=  $(PORTLIBS) $(GMP_PATH)
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -86,15 +87,16 @@ else
     export LD := $(CXX)
 endif
 
-export OFILES    :=  $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s:.o) $(SFILES:.S:.o)
+export OFILES    :=  $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S:.o)
 
 #---------------------------------------------------------------------------------
-# Build a list of include paths
+# Build a list of include paths (GMP and custom includes handled separately)
 #---------------------------------------------------------------------------------
 export INCLUDE   :=  $(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
                      $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                     -I$(CURDIR)/$(BUILD) -I$(LIBOGC_INC) -I$(PORTLIBS)/include \
-                     -I$(PORTLIBS)/include/GL -I$(PORTLIBS)/include/SDL
+                     -I$(LIBOGC_INC) -I$(PORTLIBS)/include \
+                     -I$(GMP_PATH)/include \
+                     -I$(CURDIR)/$(BUILD)
 
 #---------------------------------------------------------------------------------
 # Build a list of library paths

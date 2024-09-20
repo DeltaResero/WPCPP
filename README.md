@@ -46,6 +46,12 @@ To set up the devkitPro PowerPC devkitPPC toolchain and build system, follow the
 
 &nbsp;
 
+## Third-Party Libraries
+
+> This project includes the GMP (GNU Multiple Precision Arithmetic Library) `v6.3.0` for arbitrary-precision arithmetic. GMP is licensed under **LGPL v3**.
+  The precompiled static libraries and header files for GMP can be found in the `libs/` and `include/` directories, respectively.
+  For more information about GMP, visit the official website: https://gmplib.org/
+
 ## Disclaimer
 
 > This application relies on the Homebrew Channel to run. It is not affiliated with, endorsed by, nor sponsored by the creators of the Wii console nor the Homebrew Channel.
