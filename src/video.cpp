@@ -21,7 +21,6 @@
 #include <gccore.h>
 #include <ogcsys.h>
 #include <iostream>
-#include <unistd.h>  // For usleep() to pause the program
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -66,8 +65,8 @@ void initialize_video()
   {
     // If the framebuffer allocation failed, print an error message (if possible)
     // and exit the program since we can't continue without video output
+    // This is reminiscent of the old keyboard error asking the user to press a key to continue
     cout << "Failed to allocate framebuffer!" << endl;
-    usleep(2000000);  // Wait for 2 seconds before calling exit
     exit_WPCPP();  // Call to exit and reset system
   }
 

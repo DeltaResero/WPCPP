@@ -18,7 +18,8 @@
 
 #include "utility.hpp"
 #include <iostream>
-#include <unistd.h>  // For usleep() to pause the program
+#include <time.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <ogcsys.h>
@@ -35,8 +36,9 @@ void exit_WPCPP()
   // Print exit message
   cout << "\nExiting to Homebrew Channel..." << endl;
 
-  // Wait for 3 seconds (3000 milliseconds)
-  usleep(3000000);  // 3 seconds in microseconds
+  // Wait for 3 seconds before exiting
+  struct timespec req = {3, 0};  // 3 seconds sleep
+  nanosleep(&req, nullptr);
 
   // Reset the system and return to Homebrew Channel (or system menu if Homebrew isn't available)
   SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
