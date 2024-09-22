@@ -17,13 +17,13 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "utility.hpp"
+#include "input.hpp"
 #include <iostream>
 #include <time.h>
 #include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <ogcsys.h>
-#include <wiiuse/wpad.h>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -52,15 +52,17 @@ void wait_for_user_input_to_return()
     std::cout << "Press any button to return to the menu." << std::endl;
     while (true)
     {
-        PAD_ScanPads();  // Update GameCube controller state
-        WPAD_ScanPads();  // Update Wii Remote state
-        u32 gc_pressed = PAD_ButtonsDown(0);  // Get GameCube Controller button state
-        u32 wii_pressed = WPAD_ButtonsDown(0);  // Get Wii Remote button state
-        if (gc_pressed || wii_pressed)  // Check if any button is pressed
-        {
-            break;
-        }
-        VIDEO_WaitVSync();  // Wait for video sync to ensure smooth input handling
+      // Update the input states
+      poll_inputs();
+
+      // Check if any button on the GameCube controller or Wii Remote is pressed
+      if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
+      {
+        break;
+      }
+
+      // Wait for video sync to ensure smooth input handling
+      VIDEO_WaitVSync();
     }
 }
 
