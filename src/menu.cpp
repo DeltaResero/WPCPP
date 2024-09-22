@@ -21,11 +21,12 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 #include <iostream>
+#include "input.hpp"
 
 using namespace std;  // Use the entire std namespace for simplicity
 
 /**
- * Displays a menu and allows the user to navigate and select options.
+ * Displays a menu and allows the user to navigate and select options
  * The options are navigated using Left/Right on the D-pad, and 'A' selects the option
  * @return The index of the selected option
  */
@@ -55,17 +56,13 @@ int method_selection_menu()
   // Loop until the user selects a method or exits
   while (true)
   {
-    PAD_ScanPads();   // Update GameCube controller state
-    WPAD_ScanPads();  // Update Wii Remote state
-
-    u32 gc_pressed = PAD_ButtonsDown(0);  // Get GameCube Controller button state
-    u32 wii_pressed = WPAD_ButtonsDown(0);  // Get Wii Remote button state
-    VIDEO_WaitVSync();  // Sync video to prevent ghost inputs
+    // Poll inputs once per loop iteration to update the global input states
+    poll_inputs();
 
     // Check if navigation buttons are pressed
-    bool button_right_down = (wii_pressed & WPAD_BUTTON_RIGHT) || (gc_pressed & PAD_BUTTON_RIGHT);
-    bool button_left_down = (wii_pressed & WPAD_BUTTON_LEFT) || (gc_pressed & PAD_BUTTON_LEFT);
-    bool button_a_down = (gc_pressed & PAD_BUTTON_A) || (wii_pressed & WPAD_BUTTON_A);
+    bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
+    bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
+    bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
     // Navigate to the right method
     if (button_right_down && !button_right_last)
@@ -102,7 +99,7 @@ int method_selection_menu()
     button_a_last = button_a_down;
 
     // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit
-    if (gc_pressed & PAD_BUTTON_START || wii_pressed & WPAD_BUTTON_HOME)
+    if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
     {
       exit_WPCPP();  // Exit the program and return to the system menu
     }
@@ -139,18 +136,15 @@ int precision_selection_menu()
   // Loop until the user confirms their precision selection
   while (true)
   {
-    PAD_ScanPads();   // Update the state of GameCube controller
-    WPAD_ScanPads();  // Update the state of Wii Remote
-    u32 gc_pressed = PAD_ButtonsDown(0);  // Get GameCube Controller button state
-    u32 wii_pressed = WPAD_ButtonsDown(0);  // Get Wii Remote button state
-    VIDEO_WaitVSync();  // Sync video to avoid input ghosting
+    // Poll inputs once per loop iteration to update the global input states
+    poll_inputs();
 
     // Check if specific buttons are pressed
-    bool button_l_down = (gc_pressed & PAD_TRIGGER_L) || (wii_pressed & WPAD_BUTTON_MINUS);
-    bool button_r_down = (gc_pressed & PAD_TRIGGER_R) || (wii_pressed & WPAD_BUTTON_PLUS);
-    bool button_a_down = (gc_pressed & PAD_BUTTON_A) || (wii_pressed & WPAD_BUTTON_A);
-    bool button_left_down = (gc_pressed & PAD_BUTTON_LEFT) || (wii_pressed & WPAD_BUTTON_LEFT);
-    bool button_right_down = (gc_pressed & PAD_BUTTON_RIGHT) || (wii_pressed & WPAD_BUTTON_RIGHT);
+    bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
+    bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
+    bool button_l_down = is_button_just_pressed(PAD_TRIGGER_L, WPAD_BUTTON_MINUS);
+    bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
+    bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
     // Decrease step size by a factor of 10 if the L triggers or "-" button is pressed
     if (button_l_down && !button_l_last)

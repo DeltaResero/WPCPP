@@ -22,6 +22,7 @@
 #include "pi_calculation.hpp"
 #include "menu.hpp"
 #include "utility.hpp"
+#include "input.hpp"
 
 /**
  * Main function that runs the Pi calculation loop
@@ -35,6 +36,9 @@ int main(int argc, char **argv)
 
   // Initialize the video system and prepare the display
   initialize_video();
+
+  // Initialize inputs for Wii Remote and GameCube Controllers
+  initialize_inputs();
 
   // Main loop to keep the program running until the user decides to exit
   while (true)

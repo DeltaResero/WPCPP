@@ -22,7 +22,6 @@
 #include <ogcsys.h>
 #include <iostream>
 #include <unistd.h>  // For usleep() to pause the program
-#include <wiiuse/wpad.h>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -40,8 +39,6 @@ void initialize_video()
   video_ctx.initialized = true;  // Mark as initialized
 
   VIDEO_Init();  // Initialize the video system
-  PAD_Init();  // Initialize GameCube controller input
-  WPAD_Init();  // Initialize Wii remote input
 
   // Detect the current TV mode (e.g., NTSC, PAL) and set the appropriate video mode
   switch (VIDEO_GetCurrentTvMode())
