@@ -118,6 +118,8 @@ void compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
     // Should not normally end up here
+    cout << "Actual Pi:     " << actual_pi_str << endl;
+    cout << "Calculated Pi: " << calculated_str << endl;
     cout << "None of the digits are correct!" << endl;
     return;
   }
