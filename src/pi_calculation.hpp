@@ -22,7 +22,7 @@
 #include <gmpxx.h>
 
 mpf_class calculate_pi_machin();
-double calculate_pi_numerical_integration();
+mpf_class calculate_pi_numerical_integration();
 void calculate_and_display_pi(int method, int precision);
 
 #endif

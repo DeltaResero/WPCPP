@@ -20,6 +20,7 @@
 #include "utility.hpp"
 #include <gmpxx.h>
 #include <iostream>
+#include <cmath>
 #include <sys/time.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>
@@ -64,27 +65,56 @@ mpf_class calculate_pi_machin()
 }
 
 /**
- * Calculates Pi using numerical integration which approximates Pi by summing up small areas under a curve multipled by 4
+ * Calculates Pi using numerical integration based on the rectangle rule (Riemann sum),
+ * optimized with double precision inside the loop for speed, while periodically converting
+ * results to GMP for enhanced precision. This method approximates Pi by summing small
+ * areas under the curve and multiplying by 4. Although GMP can handle high precision,
+ * the accuracy of this method is limited by numerical integration's inherent approximation
+ * errors, which can accumulate. The accuracy typically reaches about 15-17 decimal places
+ * depending on the chosen values for 'a', 'dx', and 'batch_size', representing a trade-off
+ * between performance and accuracy.
  * @return The calculated value of Pi using numerical integration
  */
-double calculate_pi_numerical_integration()
+mpf_class calculate_pi_numerical_integration()
 {
-  double sum = 0.0;  // Accumulates the area under the curve
-  double a = 10000000.0;  // Large constant to ensure accuracy
-  double a2 = a * a;  // Precompute a^2 to avoid redundant calculations
-  double x, y;  // Variables for calculation
-  double dx = 1.0;  // Small step size for integration
+  double a = 27500000.0;  // Large constant for accuracy
+  double a2 = a * a;  // Precompute a^2 for efficiency
+  double dx = 1.00;  // Initial small step size for integration
 
-  // Loop through small intervals to sum up areas under the curve
-  for (x = dx; x <= a - dx; x += dx)
+  const int batch_size = 10000;  // Number of iterations per batch
+  mpf_class sum_gmp = 0.0;  // GMP accumulator for final precise result
+  double batch_sum = 0.0;  // Temporary double accumulator for each batch
+
+  int batch_count = 0;  // Counter to track iterations in the current batch
+
+  // Loop through intervals for area approximation with adaptive step size
+  for (double x = dx; x <= a - dx; x += dx)
   {
-    y = 1.0 / (a2 + (x * x));  // Calculate the value of the function at point x
-    sum += (y * dx);  // Approximate the area of small rectangles
+    double x2 = x * x;  // Compute x^2
+    batch_sum += (1.0 / (a2 + x2)) * dx;  // Accumulate area
+
+    // Every batch_size iterations, convert the batch_sum to GMP and reset batch_sum
+    if (++batch_count == batch_size)
+    {
+      sum_gmp += batch_sum;  // Accumulate in GMP
+      batch_sum = 0.0;  // Reset batch sum for the next batch
+      batch_count = 0;  // Reset counter
+    }
   }
 
-  // Approximate the remaining area and multiply by 4 to approximate Pi
-  sum += ((((1.0 / a2) + (1.0 / (2 * a2))) / 2.0) * dx);
-  return 4.0 * sum * a;
+  // Add any remaining sum from the last batch, if present
+  if (batch_sum != 0.0)
+  {
+    sum_gmp += batch_sum;
+  }
+
+  // Approximate the remaining area using the midpoint correction and add to GMP
+  mpf_class remaining = (mpf_class(1.0) / a2 + mpf_class(1.0) / (2 * a2)) / 2.0 * dx;
+  sum_gmp += remaining;
+
+  // Multiply by 4 and 'a' to approximate Pi using GMP precision
+  mpf_class a_gmp = a;
+  return 4.0 * sum_gmp * a_gmp;
 }
 
 /**
