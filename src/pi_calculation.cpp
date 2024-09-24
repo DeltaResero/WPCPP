@@ -40,6 +40,7 @@ mpf_class arctan(const mpf_class &x)
   mpf_class x2 = x * x;  // Precompute x^2 to avoid repetitive multiplication
   int n = 1;  // The first term uses n = 1
 
+  // NOTE: In the future, threshold should not be hardcoded
   // Threshold for stopping the iteration (precision set to 1e-50)
   mpf_class threshold("1e-50");  // Controls precision vs. performance: adjust this value to change the trade-off
 
@@ -52,6 +53,26 @@ mpf_class arctan(const mpf_class &x)
   }
 
   return result;  // Return the final result of the arctangent
+}
+
+/**
+ * Computes the factorial of a given integer using GMP for arbitrary precision
+ * This function calculates the factorial (n!) of the integer n.
+ * @param n The integer for which to compute the factorial
+ * @return The factorial of n as an arbitrary precision GMP value
+ */
+mpf_class gmp_factorial(int n)
+{
+  mpf_class result = 1;  // Initialize result to 1 (as 0! = 1 and 1! = 1)
+
+  // Loop to multiply result by each integer from 1 to n
+  for (int i = 1; i <= n; ++i)
+  {
+    result *= i;  // Multiply result by the current value of i
+  }
+
+  // Return the final result, which is n!
+  return result;
 }
 
 /**
@@ -118,6 +139,135 @@ mpf_class calculate_pi_numerical_integration()
 }
 
 /**
+ * Calculates Pi using Ramanujan's first series
+ * Ramanujan's series is known for its rapid convergence to Pi, making it highly efficient
+ * @return The calculated value of Pi using Ramanujan's series
+ */
+mpf_class calculate_pi_ramanujan()
+{
+  mpf_class sum = 0.0;  // Initialize the sum to accumulate series terms
+  mpf_class factor = 2 * sqrt(mpf_class(2)) / 9801;  // Precompute the constant factor in Ramanujan's formula
+
+  // NOTE: In the future iterations should not be hardcoded
+  int iterations = 8;  // Number of iterations controls the precision of the result (precision vs. performance)
+
+  // Loop through each term in the series expansion
+  for (int k = 0; k < iterations; ++k)
+  {
+    // Calculate the numerator: (4k)! * (1103 + 26390k)
+    mpf_class numerator = gmp_factorial(4 * k) * (1103 + 26390 * k);
+
+    // Calculate the denominator, which is composed of two parts: (k!)^4 and (396)^(4 * k)
+    mpf_class denominator = gmp_factorial(k);  // Start with k!
+
+    mpf_class temp;  // Temporary variable for storing intermediate results
+
+    // Raise (k!) to the power of 4 for the denominator
+    mpf_pow_ui(temp.get_mpf_t(), denominator.get_mpf_t(), 4);  // Compute (k!)^4
+    denominator = temp;  // Update denominator with (k!)^4
+
+    // Raise 396 to the power of (4 * k) and multiply with the denominator
+    mpf_class base396 = mpf_class(396);  // Set the base 396
+    mpf_pow_ui(temp.get_mpf_t(), base396.get_mpf_t(), 4 * k);  // Compute (396)^(4 * k)
+    denominator *= temp;  // Multiply denominator by (396)^(4 * k)
+
+    // Add the current term (numerator / denominator) to the sum
+    sum += numerator / denominator;
+  }
+
+  // Final step: Pi is calculated as 1 / (factor * sum)
+  return 1 / (factor * sum);
+}
+
+/**
+ * Calculates Pi using the Chudnovsky algorithm
+ * The Chudnovsky algorithm is extremely efficient for calculating Pi with high precision
+ * @return The calculated value of Pi using the Chudnovsky algorithm
+ */
+mpf_class calculate_pi_chudnovsky()
+{
+  // Constant term in the Chudnovsky formula: C = 426880 * sqrt(10005)
+  mpf_class C = 426880 * sqrt(mpf_class(10005));
+
+  mpf_class sum = 0;  // Initialize the sum to accumulate series terms
+
+  // NOTE: In the future iterations should not be hardcoded
+  int iterations = 4;  // Number of iterations controls the precision of the result (precision vs. performance)
+
+  // Loop through each term in the series expansion
+  for (int k = 0; k < iterations; ++k)
+  {
+    // Calculate the numerator: (6k)! * (13591409 + 545140134k)
+    mpf_class numerator = gmp_factorial(6 * k) * (13591409 + 545140134 * k);
+
+    // Calculate the denominator, composed of three parts: (3k)!, (k!)^3, and (640320)^(3 * k)
+    // First, compute (640320)^(3 * k)
+    mpf_class power_neg640320;
+    mpf_pow_ui(power_neg640320.get_mpf_t(), mpf_class(640320).get_mpf_t(), 3 * k);  // Compute (640320)^(3 * k)
+
+    // Second, compute (k!)^3
+    mpf_class factorial_k_cubed = gmp_factorial(k) * gmp_factorial(k) * gmp_factorial(k);  // Compute (k!)^3
+
+    // Third, compute the full denominator: (3k)! * (k!)^3 * (640320)^(3 * k)
+    mpf_class denominator = gmp_factorial(3 * k) * factorial_k_cubed * power_neg640320;
+
+    // Alternate signs: add for even k, subtract for odd k
+    if (k % 2 == 0)
+    {
+      sum += numerator / denominator;  // Add the current term to the sum
+    }
+    else
+    {
+      sum -= numerator / denominator;  // Subtract the current term from the sum
+    }
+  }
+
+  // Final step: Pi is calculated as C / sum
+  return C / sum;
+}
+
+/**
+ * Calculates Pi using the Gauss-Legendre algorithm
+ * This algorithm iteratively refines estimates of Pi, converging rapidly
+ * @return The calculated value of Pi using the Gauss-Legendre algorithm
+ */
+mpf_class calculate_pi_gauss_legendre()
+{
+  // Initialize values for the algorithm
+  mpf_class a = 1;  // Initial value of a
+  mpf_class b = 1 / sqrt(mpf_class(2));  // Initial value of b
+  mpf_class t = 0.25;  // Initial value of t
+  mpf_class p = 1;  // Initial value of p, representing powers of 2
+
+  // NOTE: In the future iterations should not be hardcoded
+  int iterations = 5;  // Number of iterations controls the precision of the result (precision vs. performance)
+
+  // Loop through the iterative process to refine a, b, t, and p
+  for (int i = 0; i < iterations; ++i)
+  {
+    // Calculate the next value of a as the average of a and b
+    mpf_class a_next = (a + b) / 2;
+
+    // Calculate the next value of b as the square root of the product of a and b
+    mpf_class b_next = sqrt(a * b);
+
+    // Calculate the next value of t based on the difference between a and a_next
+    mpf_class t_next = t - p * (a - a_next) * (a - a_next);
+
+    // Double the value of p for the next iteration
+    p *= 2;
+
+    // Update a, b, and t for the next iteration
+    a = a_next;
+    b = b_next;
+    t = t_next;
+  }
+
+  // Final step: Pi is calculated as (a + b)^2 / (4 * t)
+  return (a + b) * (a + b) / (4 * t);
+}
+
+/**
  * Times the Pi calculation and prints both the calculated Pi and the time taken
  * This function measures the time for Pi calculation and compares it to the known value of Pi
  * @param method The method to use for Pi calculation
@@ -141,12 +291,27 @@ void calculate_and_display_pi(int method, int precision)
   if (method == 0)
   {
     cout << "Calculating Pi using Numerical Integration Method..." << endl;
-    pi = mpf_class(calculate_pi_numerical_integration());
+    pi = calculate_pi_numerical_integration();
   }
-  else
+  else if (method == 1)
   {
     cout << "Calculating Pi using Machin's Formula Method..." << endl;
     pi = calculate_pi_machin();
+  }
+  else if (method == 2)
+  {
+    cout << "Calculating Pi using Ramanujan's First Series..." << endl;
+    pi = calculate_pi_ramanujan();
+  }
+  else if (method == 3)
+  {
+    cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
+    pi = calculate_pi_chudnovsky();
+  }
+  else // (method == 4)
+  {
+    cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
+    pi = calculate_pi_gauss_legendre();
   }
 
   // Stop the timer now that calculation is complete

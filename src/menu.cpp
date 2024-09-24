@@ -35,7 +35,10 @@ int method_selection_menu()
   // Array of Pi calculation methods
   string pi_methods[] = {
     "Numerical Integration",
-    "Machin's Formula"
+    "Machin's Formula",
+    "Ramanujan's First Series",
+    "Chudnovsky Algorithm",
+    "Gauss-Legendre Algorithm"
   };
 
   int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);

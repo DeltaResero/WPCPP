@@ -31,9 +31,6 @@
  */
 int main(int argc, char **argv)
 {
-  // Set the default GMP precision to handle up to 50 decimal places
-  mpf_set_default_prec(167);  // 50 decimal places requires approximately 167 bits
-
   // Initialize the video system and prepare the display
   initialize_video();
 
@@ -46,6 +43,10 @@ int main(int argc, char **argv)
     // Prompt the user to select a method for calculating Pi and a desired precision level
     int method = method_selection_menu();
     int precision = precision_selection_menu();
+
+    // Dynamically set GMP precision (number of bits) based on user input of how many digits of pi they want to calculate
+    // 3.32 bits per decimal place is an approximation
+    mpf_set_default_prec(precision * 3.32193);
 
     // Calculate Pi using the selected method and precision, then display the result
     calculate_and_display_pi(method, precision);

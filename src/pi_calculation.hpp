@@ -23,6 +23,9 @@
 
 mpf_class calculate_pi_machin();
 mpf_class calculate_pi_numerical_integration();
+mpf_class calculate_pi_ramanujan();
+mpf_class calculate_pi_chudnovsky();
+mpf_class calculate_pi_gauss_legendre();
 void calculate_and_display_pi(int method, int precision);
 
 #endif
