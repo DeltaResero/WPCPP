@@ -24,6 +24,7 @@
 #include <sys/time.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>
+#include <random>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -268,6 +269,130 @@ mpf_class calculate_pi_gauss_legendre()
 }
 
 /**
+ * Calculates Pi using the Spigot algorithm
+ * The Spigot algorithm calculates Pi one digit at a time using a specific sequence of operations,
+ * and it is known for its ability to output the digits of Pi without needing high memory or large precision for intermediate results
+ * @param precision The number of decimal places of Pi to calculate
+ * @return The calculated value of Pi using the Spigot algorithm
+ */
+mpf_class calculate_pi_spigot(int precision)
+{
+  const int N = precision + 1;  // Set the number of digits of Pi we want to calculate based on the precision parameter
+  int len = static_cast<int>(floor(10 * N / 3) + 1);  // Calculate array size based on the number of digits to process
+
+  std::vector<int> A(len, 2);  // Initialize the array 'A' to store intermediate values, starting with 2's
+  int nines = 0, predigit = 0;  // Track how many 9's and pre-digits occur for rounding
+
+  mpf_class pi = 0.0;  // `pi` will store the accumulated value of Pi as we calculate it
+  mpf_class ten = 10.0;  // We use this constant to handle decimal places
+  mpf_class multiplier = 1.0;  // The multiplier helps us keep track of the place value (like tenths, hundredths, etc.)
+
+  // Loop through each digit position to calculate the digits of Pi
+  for (int j = 1; j <= N; ++j)
+  {
+    int q = 0;  // `q` will store the quotient for the current step
+
+    // Process each element of array `A` to generate the next digit
+    for (int i = len; i > 0; --i)
+    {
+      // Calculate new value for A[i-1] by shifting and adding the quotient from the previous step
+      int x = 10 * A[i - 1] + q * i;
+      A[i - 1] = x % (2 * i - 1);  // Store the remainder back in A[i-1]
+      q = x / (2 * i - 1);  // Store the quotient to pass on to the next element
+    }
+
+    A[0] = q % 10;  // Extract the first digit of the new quotient
+    q = q / 10;  // Prepare for the next step by shifting `q`
+
+    // Handle rounding and carry depending on the value of `q`
+    if (q == 9)  // If `q` is 9, we might need to round up later
+    {
+      ++nines;  // Count how many 9's we have in a row
+    }
+    else if (q == 10)  // If `q` is 10, we need to round up and correct earlier digits
+    {
+      // Add 1 to the previous digit and round all the stored 9's to zeros
+      pi += (predigit + 1) * multiplier;  // Adjust Pi with the corrected digit
+      multiplier /= ten;  // Move the decimal place to the next position
+
+      // Set any earlier 9's to zero in Pi
+      for (int k = 0; k < nines; ++k)
+      {
+        pi += 9 * multiplier;  // Add 9 at the appropriate place value
+        multiplier /= ten;  // Move the decimal place to the next position
+      }
+
+      predigit = 0;  // Reset predigit
+      nines = 0;  // Reset the count of consecutive 9's
+    }
+    else
+    {
+      // Store the current digit in Pi and handle any earlier 9's
+      pi += predigit * multiplier;  // Add the predigit to Pi
+      multiplier /= ten;  // Move the decimal place to the next position
+
+      // Handle rounding if there were any earlier 9's
+      for (int k = 0; k < nines; ++k)
+      {
+        pi += 9 * multiplier;  // Add each 9 to Pi
+        multiplier /= ten;  // Move the decimal place for each 9
+      }
+
+      predigit = q;  // Set predigit to the current digit
+      nines = 0;  // Reset nines count
+    }
+  }
+
+  // Final step: Add the last digit and ensure the last one isn't missed
+  pi += predigit * multiplier;
+
+  // If there were trailing 9's that were skipped, handle them here
+  if (nines > 0)
+  {
+    for (int k = 0; k < nines; ++k)
+    {
+      pi += 9 * multiplier;
+      multiplier /= ten;
+    }
+  }
+
+  return pi;  // Return the calculated value of Pi
+}
+
+/**
+ * Calculates Pi using the Bailey-Borwein-Plouffe (BBP) formula
+ * The BBP formula is a series that rapidly converges to Pi, allowing it to calculate Pi to many decimal places quickly
+ * It is one of the fastest algorithms for calculating Pi and can be used to directly calculate the nth digit of Pi in hexadecimal
+ * @return The calculated value of Pi using the BBP formula
+ */
+mpf_class calculate_pi_bbp()
+{
+  mpf_class pi = 0.0;  // Initialize the result `pi` to store the value of Pi as it is calculated
+  mpf_class sixteen = 16.0;  // The base (16) used in the BBP formula
+  mpf_class temp;  // Temporary variable to store intermediate results of 16^(-k)
+  //NOTE: This should not be hardcoded
+  int iterations = 100;  // Number of iterations (terms) to calculate. More terms yield higher precision
+
+  // Loop through each term in the BBP series to accumulate the value of Pi
+  for (int k = 0; k < iterations; ++k)
+  {
+    // Compute the current term of the BBP series.
+    mpf_class term = (mpf_class(4) / (8 * k + 1))  // The first part of the BBP term
+                   - (mpf_class(2) / (8 * k + 4))  // The second part
+                   - (mpf_class(1) / (8 * k + 5))  // The third part
+                   - (mpf_class(1) / (8 * k + 6));  // The fourth part
+
+    // Compute 16^(-k) using GMP's `mpf_pow_ui`.
+    mpf_pow_ui(temp.get_mpf_t(), sixteen.get_mpf_t(), k);  // Calculate 16^k and store it in `temp`
+
+    // Add the current term, divided by 16^k, to Pi
+    pi += term / temp;  // Add the term divided by 16^k to the running total
+  }
+
+  return pi;  // Return the calculated value of Pi
+}
+
+/**
  * Times the Pi calculation and prints both the calculated Pi and the time taken
  * This function measures the time for Pi calculation and compares it to the known value of Pi
  * @param method The method to use for Pi calculation
@@ -288,31 +413,40 @@ void calculate_and_display_pi(int method, int precision)
   gettimeofday(&start_time, nullptr);
 
   // Determine the calculation method based on user selection and calculate Pi
-  if (method == 0)
+  switch (method)
   {
-    cout << "Calculating Pi using Numerical Integration Method..." << endl;
-    pi = calculate_pi_numerical_integration();
-  }
-  else if (method == 1)
-  {
-    cout << "Calculating Pi using Machin's Formula Method..." << endl;
-    pi = calculate_pi_machin();
-  }
-  else if (method == 2)
-  {
-    cout << "Calculating Pi using Ramanujan's First Series..." << endl;
-    pi = calculate_pi_ramanujan();
-  }
-  else if (method == 3)
-  {
-    cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
-    pi = calculate_pi_chudnovsky();
-  }
-  else // (method == 4)
-  {
-    cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
-    pi = calculate_pi_gauss_legendre();
-  }
+    case 0:
+      cout << "Calculating Pi using Numerical Integration Method..." << endl;
+      pi = calculate_pi_numerical_integration();
+      break;
+    case 1:
+      cout << "Calculating Pi using Machin's Formula Method..." << endl;
+      pi = calculate_pi_machin();
+      break;
+    case 2:
+      cout << "Calculating Pi using Ramanujan's First Series..." << endl;
+      pi = calculate_pi_ramanujan();
+      break;
+    case 3:
+      cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
+      pi = calculate_pi_chudnovsky();
+      break;
+    case 4:
+      cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
+      pi = calculate_pi_gauss_legendre();
+      break;
+    case 5:
+      cout << "Calculating Pi using Spigot Algorithm..." << endl;
+      pi = calculate_pi_spigot(precision);
+      break;
+    case 6:
+      cout << "Calculating Pi using Bailey-Borwein-Plouffe (BBP) formula..." << endl;
+      pi = calculate_pi_bbp();
+      break;
+    default:
+      cout << "Invalid method selection." << endl;
+      return;
+    }
 
   // Stop the timer now that calculation is complete
   gettimeofday(&end_time, nullptr);

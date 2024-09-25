@@ -38,7 +38,9 @@ int method_selection_menu()
     "Machin's Formula",
     "Ramanujan's First Series",
     "Chudnovsky Algorithm",
-    "Gauss-Legendre Algorithm"
+    "Gauss-Legendre Algorithm",
+    "Spigot Algorithm",
+    "Bailey-Borwein-Plouffe (BBP) Formula"
   };
 
   int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);
@@ -50,11 +52,14 @@ int method_selection_menu()
   bool button_a_last = false;
 
   // Clear the screen and display instructions
-  cout << "\x1b[2J";
+  cout << "\x1b[2J"; // ANSI escape code to clear the screen
   cout << "Select Pi Calculation Method:\n";
   cout << "Use Left/Right on the D-pad to navigate.\n";
   cout << "Press 'A' to confirm.\n";
   cout << "Press 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
+
+  // Variable to hold the length of the longest string to clear
+  int max_length = 50;  // Define a max length for clearing output
 
   // Loop until the user selects a method or exits
   while (true)
@@ -89,8 +94,9 @@ int method_selection_menu()
     button_right_last = button_right_down;
     button_left_last = button_left_down;
 
-    // Display the currently selected method
-    cout << "\rCurrently Selected: " << pi_methods[selected_index] << "      \r";
+    // Clear the previous line by overwriting it with spaces, then reprint the currently selected method
+    cout << "\rCurrently Selected: " << string(max_length, ' ') << "\r";  // Clear previous line
+    cout << "Currently Selected: " << pi_methods[selected_index] << "\r"; // Print new selection
 
     // Confirm selection when 'A' button is pressed
     if (button_a_down && !button_a_last)
@@ -130,7 +136,7 @@ int precision_selection_menu()
   bool button_right_last = false;
 
   // Clear the screen and display instructions
-  cout << "\x1b[2J";  // Clear console screen
+  cout << "\x1b[2J";  // ANSI escape code to clear the screen
   cout << "Select Pi Precision (1-50 decimal places):\n";
   cout << "Use Left/Right on the D-pad to adjust.\n";
   cout << "Press 'L'/'R' or '-'/'+' to change the stepping size.\n";
