@@ -277,7 +277,8 @@ mpf_class calculate_pi_gauss_legendre()
  */
 mpf_class calculate_pi_spigot(int precision)
 {
-  const int N = precision + 1;  // Set the number of digits of Pi we want to calculate based on the precision parameter
+  // Calculate one extra digit for proper rounding/truncation handling
+  const int N = precision + 2;  // Set the number of digits of Pi we want to calculate based on the precision parameter
   int len = static_cast<int>(floor(10 * N / 3) + 1);  // Calculate array size based on the number of digits to process
 
   std::vector<int> A(len, 2);  // Initialize the array 'A' to store intermediate values, starting with 2's

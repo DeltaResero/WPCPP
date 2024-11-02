@@ -74,14 +74,23 @@ void wait_for_user_input_to_return()
  */
 void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
 {
-  // Convert the mpf_class Pi to a string with the specified precision + 1 extra digit
-  mp_exp_t exp;  // For storing the exponent
-  string pi_str_raw = pi_value.get_str(exp, 10, precision + 1);
+  // Work with one extra digit of precision to handle rounding properly
+  int working_precision = precision + 1;
 
-  // Insert the decimal point after the first digit (since Pi starts with '3')
+  // Convert with extra precision
+  mp_exp_t exp;
+  string pi_str_raw = pi_value.get_str(exp, 10, working_precision + 1);
+
+  // Insert the decimal point after the first digit
   pi_str_raw.insert(1, ".");
 
-  // Copy the string to the provided buffer
+  // Truncate to exactly the precision we want (removing the extra digit)
+  if (pi_str_raw.length() > static_cast<std::string::size_type>(precision + 2))  // +2 for "3."
+  {
+    pi_str_raw = pi_str_raw.substr(0, precision + 2);
+  }
+
+  // Copy to output buffer
   snprintf(pi_str, TOTAL_LENGTH, "%s", pi_str_raw.c_str());
 }
 
@@ -102,46 +111,50 @@ void compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
   // Buffers for the calculated Pi string
   char calculated_str[TOTAL_LENGTH];
 
-  // Format the calculated Pi string
+  // Format the calculated Pi string with truncation instead of rounding
   format_pi(calculated_pi, calculated_str, precision);
 
-  // Pi with up to 100 decimal places (can be truncated to match user-selected precision)
+  // Pi with up to 100 decimal places
   const char *pi_digits = "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679";
 
-  // Create a buffer to hold the truncated actual Pi
+  // Create a buffer for the reference Pi truncated to exact precision
   char actual_pi_str[TOTAL_LENGTH];
-  snprintf(actual_pi_str, precision + 3, "%s", pi_digits); // Truncate to 'precision + 2' characters (3. + precision digits)
+  snprintf(actual_pi_str, precision + 3, "%s", pi_digits);  // +3 for null terminator after "3." + precision digits
 
   cout << "Comparing calculated Pi to the actual value of Pi (up to " << precision << " decimal places)" << endl;
 
-  // Check if the first 2 characters are '3.' before comparing decimal places
+  // Verify the basic format first
   if (strncmp(calculated_str, "3.", 2) != 0)
   {
-    // Should not normally end up here
     cout << "Actual Pi:     " << actual_pi_str << endl;
     cout << "Calculated Pi: " << calculated_str << endl;
     cout << "None of the digits are correct!" << endl;
     return;
   }
 
-  // Compare the digits after the decimal point
-  int mismatch_index = 2;
-  while (mismatch_index < precision + 2 && calculated_str[mismatch_index] == actual_pi_str[mismatch_index])
+  // Compare digits after decimal point
+  bool exact_match = true;
+  int mismatch_index = 2;  // Start after "3."
+
+  while (mismatch_index < precision + 2 && calculated_str[mismatch_index] && actual_pi_str[mismatch_index])
   {
+    if (calculated_str[mismatch_index] != actual_pi_str[mismatch_index])
+    {
+      exact_match = false;
+      break;
+    }
     ++mismatch_index;
   }
 
-  // If there is no mismatch, print results and that all digits are correct
-  if (mismatch_index == precision + 2)
+  // Output results
+  if (exact_match && mismatch_index == precision + 2)
   {
-    // All digits match
     cout << "Actual Pi:     " << actual_pi_str << endl;
     cout << "Calculated Pi: " << calculated_str << endl;
     cout << "All " << precision << " digit(s) after the decimal are correct!" << endl;
   }
   else
   {
-    // Found a mismatch so print where the first mismatch occurred
     print_mismatch(calculated_str, actual_pi_str, mismatch_index);
   }
 }
