@@ -55,3 +55,16 @@ Thumbs.db
 *.swp
 *~
 \#*#
+
+# Local third-party library build files
+#
+
+# Ignore the local installation directory for GMP
+third_party/gmp/build-output/
+third_party/gmp/build/
+
+# Ignore the build completion stamp file we will create
+third_party/gmp/.build_complete
+
+# Ignore linker map files
+*.map
