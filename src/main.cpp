@@ -29,7 +29,7 @@
  * Initializes the video system, displays menus for configuring, and performs
  * Pi calculations based on input until the user exits the program
  */
-int main(int argc, char **argv)
+int main()
 {
   // Initialize the video system and prepare the display
   initialize_video();
