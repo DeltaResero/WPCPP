@@ -5,14 +5,14 @@
 This repository is a continuation fork of the original version 1.1 release of
 WPCP (Wii Pi Calculator Project) by MadCatMk2. It calculates the digits of pi (π)
 on the Wii. It has since been rewritten in C++, modernized, and extended with
-additional functionality. The program can now display up to **50 decimal places**
-of Pi using with various methods via the help of .
+additional functionality.
 
 ## Limitations
 
 As the Wii’s floating-point hardware supports only **double precision**, this
 program could initially only display up to **14 decimal places of Pi**. To support
-higher precision, we now use the [GNU Multiple Precision Arithmetic Library (GMP)](https://gmplib.org) for higher precision to accurately calculate more decimal places of [Pi (π)](https://en.wikipedia.org/wiki/Pi). The current implementation handles up to **50 decimal places**.
+higher precision, we now use the [GNU Multiple Precision Arithmetic Library (GMP)](https://gmplib.org)
+to accurately calculate up to **50 decimal places** of [Pi (π)](https://en.wikipedia.org/wiki/Pi).
 
 <br>
 
@@ -20,45 +20,40 @@ higher precision, we now use the [GNU Multiple Precision Arithmetic Library (GMP
 
 ### Prerequisites
 
-* devkitPro
-  * devkitPPC
-  * libogc
-  * wii-dev
+You must have a functional devkitPro environment set up with `devkitPPC`, `wii-dev`,
+and `libogc`. For instructions, please follow the official [devkitPro Getting Started guide](https://devkitpro.org/wiki/Getting_Started).
 
-### PowerPC devkitPro devkitPPC Toolchain and Build System Setup
+### 1. Clone the Repository
 
-To set up the devkitPro PowerPC devkitPPC toolchain and build system, follow the
-instructions on the official devkitPro wiki:
+To clone the project and its GMP dependency, run the following command. The `--recursive` 
+flag is essential as it tells Git to download the required GMP submodule automatically.
 
-* [Getting Started with devkitPro](https://devkitpro.org/wiki/Getting_Started)
-* [DevkitPro Pacman](https://devkitpro.org/wiki/devkitPro_pacman)
-
-## Build Instructions
-
-**1. Clone the Repository**
-
-You must clone the repository **recursively** to download the required GMP dependency.
 ```bash
 git clone --recursive https://github.com/DeltaResero/WPCPP.git
 ```
 
-**2. Build the Project**
+> **Note:** If you cloned without the `--recursive` flag, navigate into the project
+> directory and run `git submodule update --init --recursive` to fetch the dependency.
+
+### 2. Build the Project
 
 Navigate into the project directory and run `make`.
+
 ```bash
 cd WPCPP
 make
 ```
-The first time you run `make`, the build system will automatically compile the GMP library. This may take a few minutes. Subsequent builds will be much faster and will only recompile your project's source files if they have changed. To speed up compilation you can instead run `make -j$(nproc)` to run jobs in parallel where $(nproc) is the number of processors.
 
-The `WPCPP.dol` file will be created in the project's root directory.
+The first time you run `make`, the build system will automatically compile the GMP library. This may take several minutes. Subsequent builds will be much faster. To speed up compilation, you can run jobs in parallel by replacing `make` with `make -j$(nproc)` (on Linux/macOS).
+
+The final `WPCPP.dol` file will be created in the project's root directory.
 
 ## How to Use
 
-* Copy the `apps` folder from the repository to the root of your SD card. This will create a `/apps/WPCPP/` directory on your SD card.
-* Copy the compiled `WPCPP.dol` file into the `SD:/apps/WPCPP/` folder, and rename it to `boot.dol`.
-* Insert the SD card into the Wii and launch the program using the Homebrew Channel.
-* Follow the onscreen prompts.
+1.  Copy the `apps` folder from this repository to the root of your SD card. This will create a `/apps/WPCPP/` directory.
+2.  Copy the compiled `WPCPP.dol` file into the `SD:/apps/WPCPP/` folder and **rename it to `boot.dol`**.
+3.  Insert the SD card into your Wii and launch the program from the Homebrew Channel.
+4.  Follow the onscreen prompts.
 
 <br>
 
@@ -66,45 +61,40 @@ The `WPCPP.dol` file will be created in the project's root directory.
 
 <br>
 
-## Cleaning and Rebuilding
+## Project Maintenance
 
-Use the cleaning targets to control what gets removed before a rebuild. If you want to do a fresh rebuild of the project sources but keep already-built third-party libraries like GMP, remove the project's build artifacts (object files, intermediate files, and the generated WPCPP.dol) with:
-```
-make clean
-```
+### Cleaning Build Files
 
-make distclean
-Removes the project's build artifacts and any third-party libraries the build system built (for example the locally compiled GMP). If you want to force a full rebuild of everything on the next make and memove the project's build artifacts and any third-party libraries then use:
-```
-make distclean
-```
+To clean the project for a fresh rebuild, the `Makefile` provides two targets:
 
-## Updating Submodule(s)
+*   **`make clean`**
+    Removes only the project's build files (`.o`, `.dol`). This is useful for a quick
+    rebuild of the main application without touching the GMP library.
 
-This project includes GMP as a Git submodule. Use these commands to initialize, clone, or update submodules:
+*   **`make distclean`**
+    Removes all project build files **and** the compiled GMP library. Use this command
+    to force a complete, fresh rebuild of everything from scratch.
 
-Initialize and clone submodules (use this after a fresh clone if you forgot --recursive):
+### Updating Your Local Copy
+
+If you have already cloned the project and want to pull the latest changes from this repository, you must run two commands. The first pulls the main project updates, and the second ensures the GMP submodule is updated to match what the project specifies.
+
 ```
+git pull
 git submodule update --init --recursive
-```
-
-Update submodules to the commits referenced by the main repository (safe, reproducible):
-```
-git submodule update --recursive
-```
-
-Update submodules to the latest commit on their configured branch (careful — this moves submodules to newer commits):
-```
-git submodule update --remote --merge --recursive
 ```
 
 <br>
 
 ## Third-Party Libraries
 
-This project includes the GMP (GNU Multiple Precision Arithmetic Library) for arbitrary-precision arithmetic. GMP is licensed under **LGPL v3**.
+This project includes the GMP (GNU Multiple Precision Arithmetic Library)
+for arbitrary-precision arithmetic. GMP is licensed under **LGPL v3**.
 
-The library is included as a Git submodule and is automatically configured and built from source by the `Makefile` the first time you run `make`. It is not necessary to install GMP or any other dependencies manually into your devkitPro environment.
+The library is included as a Git submodule and is automatically configured and
+built from source by the `Makefile` the first time you run `make`. It's not
+necessary to install GMP or any other dependencies manually into your
+devkitPro environment.
 
 For more information about GMP, visit the official website: <https://gmplib.org/>.
 
