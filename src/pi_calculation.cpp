@@ -142,15 +142,15 @@ mpf_class calculate_pi_numerical_integration()
 /**
  * Calculates Pi using Ramanujan's first series
  * Ramanujan's series is known for its rapid convergence to Pi, making it highly efficient
+ * @param precision The number of decimal places of Pi to calculate
  * @return The calculated value of Pi using Ramanujan's series
  */
-mpf_class calculate_pi_ramanujan()
+mpf_class calculate_pi_ramanujan(int precision)
 {
   mpf_class sum = 0.0;  // Initialize the sum to accumulate series terms
   mpf_class factor = 2 * sqrt(mpf_class(2)) / 9801;  // Precompute the constant factor in Ramanujan's formula
 
-  // NOTE: In the future iterations should not be hardcoded
-  int iterations = 8;  // Number of iterations controls the precision of the result (precision vs. performance)
+  int iterations = (precision / 8) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
@@ -183,17 +183,17 @@ mpf_class calculate_pi_ramanujan()
 /**
  * Calculates Pi using the Chudnovsky algorithm
  * The Chudnovsky algorithm is extremely efficient for calculating Pi with high precision
+ * @param precision The number of decimal places of Pi to calculate
  * @return The calculated value of Pi using the Chudnovsky algorithm
  */
-mpf_class calculate_pi_chudnovsky()
+mpf_class calculate_pi_chudnovsky(int precision)
 {
   // Constant term in the Chudnovsky formula: C = 426880 * sqrt(10005)
   mpf_class C = 426880 * sqrt(mpf_class(10005));
 
   mpf_class sum = 0;  // Initialize the sum to accumulate series terms
 
-  // NOTE: In the future iterations should not be hardcoded
-  int iterations = 4;  // Number of iterations controls the precision of the result (precision vs. performance)
+  int iterations = (precision / 14) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
@@ -230,9 +230,10 @@ mpf_class calculate_pi_chudnovsky()
 /**
  * Calculates Pi using the Gauss-Legendre algorithm
  * This algorithm iteratively refines estimates of Pi, converging rapidly
+ * @param precision The number of decimal places of Pi to calculate
  * @return The calculated value of Pi using the Gauss-Legendre algorithm
  */
-mpf_class calculate_pi_gauss_legendre()
+mpf_class calculate_pi_gauss_legendre(int precision)
 {
   // Initialize values for the algorithm
   mpf_class a = 1;  // Initial value of a
@@ -240,8 +241,7 @@ mpf_class calculate_pi_gauss_legendre()
   mpf_class t = 0.25;  // Initial value of t
   mpf_class p = 1;  // Initial value of p, representing powers of 2
 
-  // NOTE: In the future iterations should not be hardcoded
-  int iterations = 5;  // Number of iterations controls the precision of the result (precision vs. performance)
+  int iterations = static_cast<int>(ceil(log2(precision))) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
   // Loop through the iterative process to refine a, b, t, and p
   for (int i = 0; i < iterations; ++i)
@@ -364,15 +364,15 @@ mpf_class calculate_pi_spigot(int precision)
  * Calculates Pi using the Bailey-Borwein-Plouffe (BBP) formula
  * The BBP formula is a series that rapidly converges to Pi, allowing it to calculate Pi to many decimal places quickly
  * It is one of the fastest algorithms for calculating Pi and can be used to directly calculate the nth digit of Pi in hexadecimal
+ * @param precision The number of decimal places of Pi to calculate
  * @return The calculated value of Pi using the BBP formula
  */
-mpf_class calculate_pi_bbp()
+mpf_class calculate_pi_bbp(int precision)
 {
   mpf_class pi = 0.0;  // Initialize the result `pi` to store the value of Pi as it is calculated
   mpf_class sixteen = 16.0;  // The base (16) used in the BBP formula
   mpf_class temp;  // Temporary variable to store intermediate results of 16^(-k)
-  //NOTE: This should not be hardcoded
-  int iterations = 100;  // Number of iterations (terms) to calculate. More terms yield higher precision
+  int iterations = static_cast<int>(precision / 1.2) + 2;  // Number of iterations (terms) to calculate. More terms yield higher precision
 
   // Loop through each term in the BBP series to accumulate the value of Pi
   for (int k = 0; k < iterations; ++k)
@@ -426,15 +426,15 @@ void calculate_and_display_pi(int method, int precision)
       break;
     case 2:
       cout << "Calculating Pi using Ramanujan's First Series..." << endl;
-      pi = calculate_pi_ramanujan();
+      pi = calculate_pi_ramanujan(precision);
       break;
     case 3:
       cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
-      pi = calculate_pi_chudnovsky();
+      pi = calculate_pi_chudnovsky(precision);
       break;
     case 4:
       cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
-      pi = calculate_pi_gauss_legendre();
+      pi = calculate_pi_gauss_legendre(precision);
       break;
     case 5:
       cout << "Calculating Pi using Spigot Algorithm..." << endl;
@@ -442,7 +442,7 @@ void calculate_and_display_pi(int method, int precision)
       break;
     case 6:
       cout << "Calculating Pi using Bailey-Borwein-Plouffe (BBP) formula..." << endl;
-      pi = calculate_pi_bbp();
+      pi = calculate_pi_bbp(precision);
       break;
     default:
       cout << "Invalid method selection." << endl;
