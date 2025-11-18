@@ -121,11 +121,11 @@ int method_selection_menu()
 /**
  * Displays a precision selection screen to allow the user to choose the number
  * of decimal places for the Pi calculation
- * @return The selected precision (between 1 and 50 decimal places)
+ * @return The selected precision (between 1 and 1000 decimal places)
  */
 int precision_selection_menu()
 {
-  int precision = 50;  // Start with maximum precision (50 decimal places)
+  int precision = 50;  // Start with default precision
   int step_size = 1;   // Initial step size for adjusting precision
 
   // Track the previous state of buttons to detect state changes
@@ -137,9 +137,9 @@ int precision_selection_menu()
 
   // Clear the screen and display instructions
   cout << "\x1b[2J";  // ANSI escape code to clear the screen
-  cout << "Select Pi Precision (1-50 decimal places):\n";
+  cout << "Select Pi Precision (1-1000 decimal places):\n";
   cout << "Use Left/Right on the D-pad to adjust.\n";
-  cout << "Press 'L'/'R' or '-'/'+' to change the stepping size.\n";
+  cout << "Press 'L'/'R' or '-'/'+' to change the stepping size (1, 10, 100).\n";
   cout << "Press 'A' to confirm.\n";
 
   // Loop until the user confirms their precision selection
@@ -155,39 +155,49 @@ int precision_selection_menu()
     bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
-    // Decrease step size by a factor of 10 if the L triggers or "-" button is pressed
+    // Cycle step size down (100 -> 10 -> 1)
     if (button_l_down && !button_l_last)
     {
-      if (step_size > 1)  // Ensure step size doesn't go below 1
+      if (step_size == 100)
       {
-        step_size /= 10;  // Reduce step size
+        step_size = 10;
+      }
+      else if (step_size == 10)
+      {
+        step_size = 1;
       }
     }
 
-    // Increase step size by a factor of 10 if the R trigger or "+" button is pressed
+    // Cycle step size up (1 -> 10 -> 100)
     if (button_r_down && !button_r_last)
     {
-      if (step_size < 10)  // Ensure step size doesn't exceed 10
+      if (step_size == 1)
       {
-        step_size *= 10;  // Increase step size
+        step_size = 10;
+      }
+      else if (step_size == 10)
+      {
+        step_size = 100;
       }
     }
 
-    // Decrease precision if the left D-pad button is pressed, ensuring it stays >= 1
+    // Decrease precision, ensuring it stays >= 1
     if (button_left_down && !button_left_last)
     {
-      if (precision - step_size >= 1)  // Ensure precision doesn't go below 1
+      precision -= step_size;
+      if (precision < 1)
       {
-        precision -= step_size;  // Decrease precision
+        precision = 1;
       }
     }
 
-    // Increase precision if the right D-pad button is pressed, ensuring it stays <= 50
+    // Increase precision, ensuring it stays <= 1000
     if (button_right_down && !button_right_last)
     {
-      if (precision + step_size <= 50)  // Ensure precision doesn't exceed 50
+      precision += step_size;
+      if (precision > 1000)
       {
-        precision += step_size;  // Increase precision
+        precision = 1000;
       }
     }
 

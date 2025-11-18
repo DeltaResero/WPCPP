@@ -20,15 +20,24 @@
 #define UTILITY_HPP
 
 #include <gmpxx.h>
+#include <string>
+#include <vector>
 
-#define PI_DIGITS 50  // Number of decimal places of Pi
-#define TOTAL_LENGTH (PI_DIGITS + 3)  // '3.' + digits + null terminator
+#define MAX_PI_DIGITS 1000
+#define TOTAL_LENGTH (MAX_PI_DIGITS + 3)  // '3.' + digits + null terminator
+
+// A structure to hold the results of the accuracy comparison.
+// This allows passing the mismatch index along with the formatted report.
+struct AccuracyReport
+{
+  std::vector<std::string> report_lines;
+  int mismatch_index; // Character index of the first mismatch, or -1 if none.
+};
 
 void exit_WPCPP();
 void wait_for_user_input_to_return();
 void format_pi(const mpf_class &pi_value, char *pi_str, int precision);
-void compare_pi_accuracy(const mpf_class &calculated_pi, int precision);
-void print_mismatch(const char *calculated_str, const char *actual_str, int mismatch_index);
+AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision);
 
 #endif
 

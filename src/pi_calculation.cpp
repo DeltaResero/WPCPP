@@ -18,6 +18,7 @@
 
 #include "pi_calculation.hpp"
 #include "utility.hpp"
+#include "input.hpp"
 #include <gmpxx.h>
 #include <iostream>
 #include <cmath>
@@ -25,6 +26,8 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 #include <random>
+#include <vector>
+#include <string>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -394,10 +397,9 @@ mpf_class calculate_pi_bbp(int precision)
 }
 
 /**
- * Times the Pi calculation and prints both the calculated Pi and the time taken
- * This function measures the time for Pi calculation and compares it to the known value of Pi
- * @param method The method to use for Pi calculation
- * @param precision The number of decimal places for the Pi calculation
+ * Times the Pi calculation and displays a detailed, paginated report.
+ * @param method The method to use for Pi calculation.
+ * @param precision The number of decimal places for the Pi calculation.
  */
 void calculate_and_display_pi(int method, int precision)
 {
@@ -468,11 +470,135 @@ void calculate_and_display_pi(int method, int precision)
     cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
   }
 
-  // Call function to display and compare calculated results to expected results
-  compare_pi_accuracy(pi, precision);
+  // Wait for user to press a button before showing the detailed results
+  cout << "\nPress any button to view results..." << endl;
+  while (true)
+  {
+    poll_inputs();
+    if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
+    {
+      break;
+    }
+    VIDEO_WaitVSync();
+  }
 
-  // Call the utility function to handle returning to the menu
-  wait_for_user_input_to_return();
+  // Get the full string representation of Pi for pagination
+  char pi_full_str_c[TOTAL_LENGTH];
+  format_pi(pi, pi_full_str_c, precision);
+  string pi_full_string(pi_full_str_c);
+
+  // Get the accuracy report
+  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision);
+
+  // --- New Pagination and Display Loop ---
+  const int page_size = 1200; // A larger page size to better fill the screen
+  int total_pages = (pi_full_string.length() + page_size - 1) / page_size;
+  if (total_pages == 0) { total_pages = 1; }
+  int current_page = 0;
+  bool needs_redraw = true;
+
+  while (true)
+  {
+    WPAD_ScanPads();
+    u32 pressed = WPAD_ButtonsDown(0);
+
+    if (pressed & WPAD_BUTTON_RIGHT)
+    {
+      if (current_page < total_pages - 1)
+      {
+        current_page++;
+        needs_redraw = true;
+      }
+    }
+    if (pressed & WPAD_BUTTON_LEFT)
+    {
+      if (current_page > 0)
+      {
+        current_page--;
+        needs_redraw = true;
+      }
+    }
+    if (pressed & (WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME))
+    {
+      break;
+    }
+
+    if (needs_redraw)
+    {
+      cout << "\x1b[2J";
+
+      // Print the Accuracy Report Header
+      for (const auto& line : accuracy_info.report_lines)
+      {
+        cout << line << endl;
+      }
+
+      // Print a separator
+      cout << endl << "--- Full Result ---" << endl;
+
+      // Prepare the content for the current page
+      int start_pos = current_page * page_size;
+      string page_content_raw = pi_full_string.substr(start_pos, page_size);
+      string page_content_full = page_content_raw;
+      int page_mismatch_pos = accuracy_info.mismatch_index - start_pos;
+
+      // Add ellipses for continuation if there are multiple pages
+      if (total_pages > 1)
+      {
+        if (current_page > 0)
+        {
+          page_content_full.insert(0, "...");
+          if (accuracy_info.mismatch_index != -1) { page_mismatch_pos += 3; }
+        }
+        if (current_page < total_pages - 1)
+        {
+          page_content_full += "...";
+        }
+      }
+
+      const string red = "\x1b[31m";
+      const string reset_color = "\x1b[37m";
+
+      // Print the paginated body with color coding
+      if (accuracy_info.mismatch_index == -1)
+      {
+        cout << page_content_full << endl;
+      }
+      else
+      {
+        // Mismatch occurred before the start of this page's raw content
+        if (accuracy_info.mismatch_index < start_pos)
+        {
+          cout << red << page_content_full << reset_color << endl;
+        }
+        // Mismatch occurs after this page's raw content
+        else if (accuracy_info.mismatch_index >= start_pos + (int)page_content_raw.length())
+        {
+          cout << page_content_full << endl;
+        }
+        // Mismatch is on this page
+        else
+        {
+          string correct_part = page_content_full.substr(0, page_mismatch_pos);
+          string incorrect_part = page_content_full.substr(page_mismatch_pos);
+          cout << correct_part << red << incorrect_part << reset_color << endl;
+        }
+      }
+
+      // Print the Footer
+      if (total_pages > 1)
+      {
+        cout << "\nPage " << (current_page + 1) << " of " << total_pages << endl;
+        cout << "Use D-Pad Left/Right to scroll." << endl;
+      }
+
+      cout << "Press A/B to return to menu. Press Home/Start to exit." << endl;
+
+      needs_redraw = false;
+    }
+
+    VIDEO_WaitVSync();
+  }
 }
 
 // EOF

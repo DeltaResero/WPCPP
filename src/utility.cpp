@@ -24,6 +24,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ogcsys.h>
+#include <string>
+#include <vector>
+#include <algorithm>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -95,91 +98,129 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
 }
 
 /**
- * Compares the calculated Pi value with the actual Pi value (up to the specified precision).
- * This function prints the comparison result and identifies the first mismatched digit (if any)
+ * Compares the calculated Pi value with the actual Pi value and generates a detailed report.
  * @param calculated_pi The Pi value calculated by the program
  * @param precision The number of decimal places to compare
+ * @return An AccuracyReport struct containing formatted strings and the mismatch index.
  */
-void compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
+AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
 {
+  AccuracyReport result;
+  result.mismatch_index = -1;
+
   if (calculated_pi <= 0)
   {
-    cout << "Invalid input: Pi cannot be less than or equal to zero." << endl;
-    return;
+    result.report_lines.push_back("Invalid input: Pi cannot be less than or equal to zero.");
+    return result;
   }
 
-  // Buffers for the calculated Pi string
-  char calculated_str[TOTAL_LENGTH];
+  // Buffers for the string representations of Pi
+  char calculated_str_c[TOTAL_LENGTH];
+  format_pi(calculated_pi, calculated_str_c, precision);
+  string calculated_str(calculated_str_c);
 
-  // Format the calculated Pi string with truncation instead of rounding
-  format_pi(calculated_pi, calculated_str, precision);
+  // Pi with up to 1000 decimal places
+  const char *pi_digits = "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679"
+    "8214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196"
+    "4428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273"
+    "7245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094"
+    "3305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912"
+    "9833673362440656643086021394946395224737190702179860943702770539217176293176752384674818467669405132"
+    "0005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235"
+    "4201995611212902196086403441815981362977477130996051870721134999999837297804995105973173281609631859"
+    "5024459455346908302642522308253344685035261931188171010003137838752886587533208381420617177669147303"
+    "5982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989";
+  char actual_pi_str_c[TOTAL_LENGTH];
+  snprintf(actual_pi_str_c, precision + 3, "%s", pi_digits);
+  string actual_pi_str(actual_pi_str_c);
 
-  // Pi with up to 100 decimal places
-  const char *pi_digits = "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679";
-
-  // Create a buffer for the reference Pi truncated to exact precision
-  char actual_pi_str[TOTAL_LENGTH];
-  snprintf(actual_pi_str, precision + 3, "%s", pi_digits);  // +3 for null terminator after "3." + precision digits
-
-  cout << "Comparing calculated Pi to the actual value of Pi (up to " << precision << " decimal places)" << endl;
-
-  // Verify the basic format first
-  if (strncmp(calculated_str, "3.", 2) != 0)
+  // Find the first mismatch
+  int mismatch_idx = -1;
+  for (size_t i = 0; i < actual_pi_str.length(); ++i)
   {
-    cout << "Actual Pi:     " << actual_pi_str << endl;
-    cout << "Calculated Pi: " << calculated_str << endl;
-    cout << "None of the digits are correct!" << endl;
-    return;
-  }
-
-  // Compare digits after decimal point
-  bool exact_match = true;
-  int mismatch_index = 2;  // Start after "3."
-
-  while (mismatch_index < precision + 2 && calculated_str[mismatch_index] && actual_pi_str[mismatch_index])
-  {
-    if (calculated_str[mismatch_index] != actual_pi_str[mismatch_index])
+    if (i >= calculated_str.length() || actual_pi_str[i] != calculated_str[i])
     {
-      exact_match = false;
+      mismatch_idx = i;
       break;
     }
-    ++mismatch_index;
   }
 
-  // Output results
-  if (exact_match && mismatch_index == precision + 2)
+  const string actual_pi_label = "Actual Pi:     ";
+  const string calculated_pi_label = "Calculated Pi: ";
+  const size_t max_line_width = 60;
+  const size_t available_width = max_line_width - actual_pi_label.length();
+
+  // If there is no mismatch, return a success report
+  if (mismatch_idx == -1)
   {
-    cout << "Actual Pi:     " << actual_pi_str << endl;
-    cout << "Calculated Pi: " << calculated_str << endl;
-    cout << "All " << precision << " digit(s) after the decimal are correct!" << endl;
+    string actual_display;
+    string calc_display;
+
+    if (actual_pi_str.length() > available_width)
+    {
+      actual_display = actual_pi_str.substr(0, available_width - 3) + "...";
+      calc_display = calculated_str.substr(0, available_width - 3) + "...";
+    }
+    else
+    {
+      actual_display = actual_pi_str;
+      calc_display = calculated_str;
+    }
+    result.report_lines.push_back(actual_pi_label + actual_display);
+    result.report_lines.push_back(calculated_pi_label + calc_display);
+    result.report_lines.push_back("All " + to_string(precision) + " digit(s) after the decimal are correct!");
+    return result;
   }
+
+  result.mismatch_index = mismatch_idx;
+  string actual_display, calc_display, arrow_line;
+  const string red = "\x1b[31m";
+  const string reset_color = "\x1b[37m";
+
+  // Case 1: The full string fits on one line without truncation.
+  if (actual_pi_str.length() <= available_width)
+  {
+    actual_display = actual_pi_str;
+    calc_display = calculated_str;
+    arrow_line = string(calculated_pi_label.length() + mismatch_idx, ' ') + red + "^" + reset_color;
+  }
+  // Case 2: The string is long, but the mismatch is visible near the start.
+  else if (mismatch_idx < static_cast<int>(available_width - 4))
+  {
+    actual_display = actual_pi_str.substr(0, available_width - 3) + "...";
+    calc_display = calculated_str.substr(0, available_width - 3) + "...";
+    arrow_line = string(calculated_pi_label.length() + mismatch_idx, ' ') + red + "^" + reset_color;
+  }
+  // Case 3: The string is long and the mismatch is far to the right.
   else
   {
-    print_mismatch(calculated_str, actual_pi_str, mismatch_index);
+    const int prefix_len = 8;
+    const string ellipsis = "...";
+    int context_len = available_width - prefix_len - ellipsis.length();
+    if (context_len < 5) { context_len = 5; }
+
+    int context_start = mismatch_idx - (context_len / 2);
+    if (context_start <= prefix_len) { context_start = prefix_len + 1; }
+    if (context_start + context_len >= static_cast<int>(actual_pi_str.length()))
+    {
+      context_start = actual_pi_str.length() - context_len;
+    }
+
+    string prefix = actual_pi_str.substr(0, prefix_len);
+    string actual_context = actual_pi_str.substr(context_start, context_len);
+    string calc_context = calculated_str.substr(context_start, context_len);
+
+    actual_display = prefix + ellipsis + actual_context;
+    calc_display = prefix + ellipsis + calc_context;
+
+    int arrow_pos = calculated_pi_label.length() + prefix.length() + ellipsis.length() + (mismatch_idx - context_start);
+    arrow_line = string(arrow_pos, ' ') + red + "^" + reset_color;
   }
+
+  result.report_lines.push_back(actual_pi_label + actual_display);
+  result.report_lines.push_back(calculated_pi_label + calc_display);
+  result.report_lines.push_back(arrow_line);
+  result.report_lines.push_back("First mismatch at: " + to_string(mismatch_idx - 1) + " digit(s) after the decimal");
+
+  return result;
 }
-
-/**
- * Prints the location of the first mismatched digit between the calculated
- * Pi string and the actual Pi string
- * @param calculated_str The string of the calculated Pi value
- * @param actual_str The string representing the actual Pi value
- * @param mismatch_index The index where the mismatch occurs
- */
-void print_mismatch(const char *calculated_str, const char *actual_str, int mismatch_index)
-{
-  cout << "Actual Pi:     " << actual_str << endl;
-  cout << "Calculated Pi: " << calculated_str << endl;
-
-  // Print an arrow pointing to the first mismatch
-  cout << "               ";  // Aligns the arrow with the Pi values
-  for (int i = 0; i < mismatch_index; ++i)
-  {
-    cout << " ";  // Create space for the arrow to point under the mismatched digit
-  }
-  // Output an arrow at the location of mismatch
-  cout << "^\n";
-  cout << "First mismatch at: " << (mismatch_index - 1) << " digit(s) after the decimal" << endl;
-}
-
-// EOF
