@@ -25,7 +25,6 @@
 
 void initialize_inputs();
 void poll_inputs();
-std::pair<u32, u32> scan_inputs();
 bool is_button_just_pressed(u32 gc_button, u32 wii_button);
 
 #endif

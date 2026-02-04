@@ -90,7 +90,7 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
   // Truncate to exactly the precision we want (removing the extra digit)
   if (pi_str_raw.length() > static_cast<std::string::size_type>(precision + 2))  // +2 for "3."
   {
-    pi_str_raw = pi_str_raw.substr(0, precision + 2);
+    pi_str_raw.resize(precision + 2);
   }
 
   // Copy to output buffer
@@ -197,10 +197,8 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
     const int prefix_len = 8;
     const string ellipsis = "...";
     int context_len = available_width - prefix_len - ellipsis.length();
-    if (context_len < 5) { context_len = 5; }
 
     int context_start = mismatch_idx - (context_len / 2);
-    if (context_start <= prefix_len) { context_start = prefix_len + 1; }
     if (context_start + context_len >= static_cast<int>(actual_pi_str.length()))
     {
       context_start = actual_pi_str.length() - context_len;
@@ -224,3 +222,5 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
 
   return result;
 }
+
+// EOF
