@@ -26,15 +26,37 @@
 #define MAX_PI_DIGITS 1000
 #define TOTAL_LENGTH (MAX_PI_DIGITS + 3)  // '3.' + digits + null terminator
 
-// A structure to hold the results of the accuracy comparison.
-// This allows passing the mismatch index along with the formatted report.
-struct AccuracyReport
+// A class to hold the results of the accuracy comparison.
+// Encapsulates the report lines and mismatch index.
+class AccuracyReport
 {
+public:
+  // Constructor initializes mismatch_index to -1 (no mismatch)
+  AccuracyReport() : mismatch_index(-1) {}
+
+  // Adds a line of text to the report
+  void add_line(const std::string& line) {
+    report_lines.push_back(line);
+  }
+
+  // Returns the list of report lines (read-only)
+  const std::vector<std::string>& get_lines() const {
+    return report_lines;
+  }
+
+  // Sets the index where the mismatch occurred
+  void set_mismatch_index(int index) {
+    mismatch_index = index;
+  }
+
+  // Returns the mismatch index
+  int get_mismatch_index() const {
+    return mismatch_index;
+  }
+
+private:
   std::vector<std::string> report_lines;
   int mismatch_index; // Character index of the first mismatch, or -1 if none.
-
-  // Constructor to ensure safe initialization
-  AccuracyReport() : mismatch_index(-1) {}
 };
 
 void exit_WPCPP();

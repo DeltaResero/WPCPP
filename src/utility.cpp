@@ -101,15 +101,16 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
  * Compares the calculated Pi value with the actual Pi value and generates a detailed report.
  * @param calculated_pi The Pi value calculated by the program
  * @param precision The number of decimal places to compare
- * @return An AccuracyReport struct containing formatted strings and the mismatch index.
+ * @return An AccuracyReport object containing formatted strings and the mismatch index.
  */
 AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
 {
   AccuracyReport result;
+  // result.mismatch_index is initialized to -1 by the constructor
 
   if (calculated_pi <= 0)
   {
-    result.report_lines.push_back("Invalid input: Pi cannot be less than or equal to zero.");
+    result.add_line("Invalid input: Pi cannot be less than or equal to zero.");
     return result;
   }
 
@@ -165,13 +166,13 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
       actual_display = actual_pi_str;
       calc_display = calculated_str;
     }
-    result.report_lines.push_back(actual_pi_label + actual_display);
-    result.report_lines.push_back(calculated_pi_label + calc_display);
-    result.report_lines.push_back("All " + to_string(precision) + " digit(s) after the decimal are correct!");
+    result.add_line(actual_pi_label + actual_display);
+    result.add_line(calculated_pi_label + calc_display);
+    result.add_line("All " + to_string(precision) + " digit(s) after the decimal are correct!");
     return result;
   }
 
-  result.mismatch_index = mismatch_idx;
+  result.set_mismatch_index(mismatch_idx);
   string actual_display;
   string calc_display;
   string arrow_line;
@@ -216,10 +217,10 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
     arrow_line = string(arrow_pos, ' ') + red + "^" + reset_color;
   }
 
-  result.report_lines.push_back(actual_pi_label + actual_display);
-  result.report_lines.push_back(calculated_pi_label + calc_display);
-  result.report_lines.push_back(arrow_line);
-  result.report_lines.push_back("First mismatch at: " + to_string(mismatch_idx - 1) + " digit(s) after the decimal");
+  result.add_line(actual_pi_label + actual_display);
+  result.add_line(calculated_pi_label + calc_display);
+  result.add_line(arrow_line);
+  result.add_line("First mismatch at: " + to_string(mismatch_idx - 1) + " digit(s) after the decimal");
 
   return result;
 }

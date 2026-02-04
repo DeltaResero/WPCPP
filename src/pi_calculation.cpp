@@ -533,7 +533,7 @@ void calculate_and_display_pi(int method, int precision)
       cout << "\x1b[2J";
 
       // Print the Accuracy Report Header
-      for (const auto& line : accuracy_info.report_lines)
+      for (const auto& line : accuracy_info.get_lines())
       {
         cout << line << endl;
       }
@@ -545,7 +545,8 @@ void calculate_and_display_pi(int method, int precision)
       int start_pos = current_page * page_size;
       string page_content_raw = pi_full_string.substr(start_pos, page_size);
       string page_content_full = page_content_raw;
-      int page_mismatch_pos = accuracy_info.mismatch_index - start_pos;
+      int mismatch_index = accuracy_info.get_mismatch_index();
+      int page_mismatch_pos = mismatch_index - start_pos;
 
       // Add ellipses for continuation if there are multiple pages
       if (total_pages > 1)
@@ -553,7 +554,7 @@ void calculate_and_display_pi(int method, int precision)
         if (current_page > 0)
         {
           page_content_full.insert(0, "...");
-          if (accuracy_info.mismatch_index != -1) { page_mismatch_pos += 3; }
+          if (mismatch_index != -1) { page_mismatch_pos += 3; }
         }
         if (current_page < total_pages - 1)
         {
@@ -565,19 +566,19 @@ void calculate_and_display_pi(int method, int precision)
       const string reset_color = "\x1b[37m";
 
       // Print the paginated body with color coding
-      if (accuracy_info.mismatch_index == -1)
+      if (mismatch_index == -1)
       {
         cout << page_content_full << endl;
       }
       else
       {
         // Mismatch occurred before the start of this page's raw content
-        if (accuracy_info.mismatch_index < start_pos)
+        if (mismatch_index < start_pos)
         {
           cout << red << page_content_full << reset_color << endl;
         }
         // Mismatch occurs after this page's raw content
-        else if (accuracy_info.mismatch_index >= start_pos + (int)page_content_raw.length())
+        else if (mismatch_index >= start_pos + (int)page_content_raw.length())
         {
           cout << page_content_full << endl;
         }
