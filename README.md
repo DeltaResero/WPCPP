@@ -79,11 +79,11 @@ The final `WPCPP.dol` file will be created in the project's root directory.
 
 To clean the project for a fresh rebuild, the `Makefile` provides two targets:
 
-* **`make clean`**
+- **`make clean`**
   Removes only the project's build files (`.o`, `.dol`). This is useful for a
   quick rebuild of the main application without touching the GMP library.
 
-* **`make distclean`**
+- **`make distclean`**
   Removes all project build files **and** the compiled GMP library. Use this
   command to force a complete, fresh rebuild of everything from scratch.
 
