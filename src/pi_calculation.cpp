@@ -284,8 +284,12 @@ mpf_class calculate_pi_spigot(int precision)
   const int N = precision + 2;  // Set the number of digits of Pi we want to calculate based on the precision parameter
   int len = static_cast<int>(floor(10 * N / 3) + 1);  // Calculate array size based on the number of digits to process
 
-  std::vector<int> A(len, 2);  // Initialize the array 'A' to store intermediate values, starting with 2's
-  int nines = 0, predigit = 0;  // Track how many 9's and pre-digits occur for rounding
+  // Initialize the array 'A' to store intermediate values, starting with 2's
+  std::vector<int> A(len, 2);
+
+  // Track how many 9's and pre-digits occur for rounding
+  int nines = 0;
+  int predigit = 0;
 
   mpf_class pi = 0.0;  // `pi` will store the accumulated value of Pi as we calculate it
   mpf_class ten = 10.0;  // We use this constant to handle decimal places
@@ -409,7 +413,8 @@ void calculate_and_display_pi(int method, int precision)
   // Display the selected precision level
   cout << "Precision level set to: " << precision << " decimal place(s)" << endl;
 
-  struct timeval start_time, end_time;  // To measure elapsed time
+  struct timeval start_time;
+  struct timeval end_time;  // To measure elapsed time
   mpf_class pi;  // Variable to hold the calculated value of Pi
 
   // Start the timer to measure calculation duration

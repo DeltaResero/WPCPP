@@ -173,7 +173,9 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
   }
 
   result.mismatch_index = mismatch_idx;
-  string actual_display, calc_display, arrow_line;
+  string actual_display;
+  string calc_display;
+  string arrow_line;
   const string red = "\x1b[31m";
   const string reset_color = "\x1b[37m";
 
