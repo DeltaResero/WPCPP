@@ -24,6 +24,14 @@
 
 using namespace std;  // Use the entire std namespace for simplicity
 
+// Define a context to encapsulate video-related global state
+// Defined locally here because no other file needs to access these members directly.
+struct VideoContext {
+  void *xfb;          // Framebuffer pointer
+  GXRModeObj *rmode;  // TV display mode
+  bool initialized;   // Tracks whether the video system is initialized
+};
+
 // Initialize a video context globally
 static VideoContext video_ctx = {nullptr, nullptr, false};  // Keep track of video state in one place
 

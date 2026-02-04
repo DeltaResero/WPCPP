@@ -19,15 +19,7 @@
 #ifndef VIDEO_HPP
 #define VIDEO_HPP
 
-#include <gccore.h>  // For GXRModeObj and video functions from libogc
-
-// Define a context to encapsulate video-related global state
-struct VideoContext{
-  void *xfb;  // Framebuffer pointer
-  GXRModeObj *rmode;  // TV display mode
-  bool initialized;  // Tracks whether the video system is initialized
-};
-
+// Public API functions
 void initialize_video();
 
 #endif

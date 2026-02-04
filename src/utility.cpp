@@ -106,7 +106,6 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
 AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
 {
   AccuracyReport result;
-  result.mismatch_index = -1;
 
   if (calculated_pi <= 0)
   {

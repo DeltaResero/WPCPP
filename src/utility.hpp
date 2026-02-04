@@ -32,6 +32,9 @@ struct AccuracyReport
 {
   std::vector<std::string> report_lines;
   int mismatch_index; // Character index of the first mismatch, or -1 if none.
+
+  // Constructor to ensure safe initialization
+  AccuracyReport() : mismatch_index(-1) {}
 };
 
 void exit_WPCPP();
