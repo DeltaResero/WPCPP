@@ -320,10 +320,10 @@ mpf_class calculate_pi_spigot(int precision)
       pi += (predigit + 1) * multiplier;  // Adjust Pi with the corrected digit
       multiplier /= ten;  // Move the decimal place to the next position
 
-      // Set any earlier 9's to zero in Pi
+      // Set any earlier 9's to zero in Pi. The carry has already turned each of them
+      // into a 0, so nothing is added here and only the place value moves along
       for (int k = 0; k < nines; ++k)
       {
-        pi += 9 * multiplier;  // Add 9 at the appropriate place value
         multiplier /= ten;  // Move the decimal place to the next position
       }
 
