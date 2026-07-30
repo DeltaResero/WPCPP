@@ -73,21 +73,65 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
   // Work with one extra digit of precision to handle rounding properly
   int working_precision = precision + 1;
 
-  // Convert with extra precision
+  // GMP returns the digits with no decimal point in them, along with an exponent
+  // saying how many of those digits belong in front of the point. A value of zero
+  // is returned as an empty string with an exponent of zero
   mp_exp_t exp;
-  string pi_str_raw = pi_value.get_str(exp, 10, working_precision + 1);
+  string digits = pi_value.get_str(exp, 10, working_precision + 1);
 
-  // Insert the decimal point after the first digit
-  pi_str_raw.insert(1, ".");
-
-  // Truncate to exactly the precision we want (removing the extra digit)
-  if (pi_str_raw.length() > static_cast<std::string::size_type>(precision + 2))  // +2 for "3."
+  // Separate any minus sign so that it is not mistaken for a digit below
+  string sign;
+  if (!digits.empty() && digits[0] == '-')
   {
-    pi_str_raw.resize(precision + 2);
+    sign = "-";
+    digits.erase(0, 1);
   }
 
+  // Give a zero value a digit to work with, since GMP supplies none
+  if (digits.empty())
+  {
+    digits = "0";
+    exp = 1;
+  }
+
+  // Keep the exponent inside a sane range so that the padding below cannot ask for
+  // an enormous string. Anything outside this range is trimmed off the result anyway
+  if (exp < -static_cast<mp_exp_t>(precision))
+  {
+    exp = -static_cast<mp_exp_t>(precision);
+  }
+  if (exp > static_cast<mp_exp_t>(TOTAL_LENGTH))
+  {
+    exp = static_cast<mp_exp_t>(TOTAL_LENGTH);
+  }
+
+  // Place the decimal point where the exponent says it belongs
+  string formatted;
+  if (exp <= 0)
+  {
+    // The value is smaller than one, so it needs a leading zero and padding zeros
+    formatted = "0." + string(static_cast<size_t>(-exp), '0') + digits;
+  }
+  else if (static_cast<size_t>(exp) >= digits.length())
+  {
+    // Every digit sits in front of the point, so pad out to the point itself
+    formatted = digits + string(static_cast<size_t>(exp) - digits.length(), '0') + ".";
+  }
+  else
+  {
+    formatted = digits;
+    formatted.insert(static_cast<size_t>(exp), ".");
+  }
+
+  formatted = sign + formatted;
+
+  // Fix the length at exactly the precision we want, dropping the extra digit. GMP
+  // leaves trailing zeros off its digits, so padding them back keeps the value the same
+  size_t point = formatted.find('.');
+  formatted.resize(point + 1 + static_cast<size_t>(precision), '0');
+
   // Copy to output buffer
-  snprintf(pi_str, TOTAL_LENGTH, "%s", pi_str_raw.c_str());
+  snprintf(pi_str, TOTAL_LENGTH, "%s", formatted.c_str());
 }
 
 /**
