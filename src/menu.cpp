@@ -134,6 +134,7 @@ int precision_selection_menu()
   cout << "Use Left/Right on the D-pad to adjust.\n";
   cout << "Press 'L'/'R' or '-'/'+' to change the stepping size (1, 10, 100).\n";
   cout << "Press 'A' to confirm.\n";
+  cout << "Press 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
 
   // Loop until the user confirms their precision selection
   while (true)
@@ -211,6 +212,12 @@ int precision_selection_menu()
 
     // Update the last state of the 'A' button
     button_a_last = button_a_down;
+
+    // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit
+    if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
+    {
+      exit_WPCPP();  // Exit the program and return to the system menu
+    }
 
     // Wait for video sync to ensure smooth input handling
     VIDEO_WaitVSync();
