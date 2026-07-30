@@ -509,10 +509,14 @@ void calculate_and_display_pi(int method, int precision)
 
   while (true)
   {
-    WPAD_ScanPads();
-    u32 pressed = WPAD_ButtonsDown(0);
+    // Read both controllers through the shared input module. Reading the Wii Remote
+    // directly here would leave the module holding a stale idea of which buttons are
+    // down, and the next menu would then mistake a button still being held for a fresh
+    // press. It would also leave the GameCube controller unread and therefore dead
+    poll_inputs();  // Already waits for video sync, so this loop does not wait again
 
-    if (pressed & WPAD_BUTTON_RIGHT)
+    // Turn the page
+    if (is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT))
     {
       if (current_page < total_pages - 1)
       {
@@ -520,7 +524,7 @@ void calculate_and_display_pi(int method, int precision)
         needs_redraw = true;
       }
     }
-    if (pressed & WPAD_BUTTON_LEFT)
+    if (is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT))
     {
       if (current_page > 0)
       {
@@ -528,7 +532,15 @@ void calculate_and_display_pi(int method, int precision)
         needs_redraw = true;
       }
     }
-    if (pressed & (WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME))
+
+    // Leave the program, matching what the menus do with these same buttons
+    if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
+    {
+      exit_WPCPP();
+    }
+
+    // Go back to the menu
+    if (is_button_just_pressed(PAD_BUTTON_A | PAD_BUTTON_B, WPAD_BUTTON_A | WPAD_BUTTON_B))
     {
       break;
     }
@@ -607,8 +619,6 @@ void calculate_and_display_pi(int method, int precision)
 
       needs_redraw = false;
     }
-
-    VIDEO_WaitVSync();
   }
 }
 
