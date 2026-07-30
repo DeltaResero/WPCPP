@@ -30,6 +30,12 @@ int main()
   // Initialize inputs for Wii Remote and GameCube Controllers
   initialize_inputs();
 
+  // Spare bits carried on top of whatever precision the user asks for. Every multiply
+  // and divide rounds its result off a little, and those roundings pile up over the
+  // thousands of operations a run takes. The spare bits give that loss somewhere to
+  // go besides the digits being displayed
+  const mp_bitcnt_t guard_bits = 64;
+
   // Main loop to keep the program running until the user decides to exit
   while (true)
   {
@@ -38,8 +44,8 @@ int main()
     int precision = precision_selection_menu();
 
     // Dynamically set GMP precision (number of bits) based on user input of how many digits of pi they want to calculate
-    // 3.32 bits per decimal place is an approximation
-    mpf_set_default_prec(precision * 3.32193);
+    // 3.32193 bits per decimal place is an approximation of log2(10)
+    mpf_set_default_prec(static_cast<mp_bitcnt_t>(precision * 3.32193) + guard_bits);
 
     // Calculate Pi using the selected method and precision, then display the result
     calculate_and_display_pi(method, precision);
