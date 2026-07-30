@@ -537,7 +537,7 @@ void calculate_and_display_pi(int method, int precision)
     // directly here would leave the module holding a stale idea of which buttons are
     // down, and the next menu would then mistake a button still being held for a fresh
     // press. It would also leave the GameCube controller unread and therefore dead
-    poll_inputs();  // Already waits for video sync, so this loop does not wait again
+    poll_inputs();
 
     // Turn the page
     if (is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT))
@@ -643,6 +643,9 @@ void calculate_and_display_pi(int method, int precision)
 
       needs_redraw = false;
     }
+
+    // Wait for video sync to ensure smooth input handling
+    VIDEO_WaitVSync();
   }
 }
 

@@ -31,7 +31,10 @@ void initialize_inputs()
 
 /**
  * Poll the input state for GameCube and Wii Remote controllers
- * This should be called in each loop iteration to update the current input state
+ * This should be called once per loop iteration to update the current input state.
+ * Waiting for video sync is left to the caller. A loop that waits here as well as at
+ * its own end would read the controllers only every second frame, which makes every
+ * button press take twice as long to register
  */
 void poll_inputs()
 {
@@ -45,8 +48,6 @@ void poll_inputs()
     // Get the current state of the buttons
     gc_state = PAD_ButtonsHeld(0);  // Buttons currently held on GameCube controller
     wii_state = WPAD_ButtonsHeld(0);  // Buttons currently held on Wii Remote
-
-    VIDEO_WaitVSync();  // Wait for video sync to avoid input ghosting
 }
 
 /**
