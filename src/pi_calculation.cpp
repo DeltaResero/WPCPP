@@ -286,7 +286,11 @@ mpf_class calculate_pi_spigot(int precision)
 
   mpf_class pi = 0.0;  // `pi` will store the accumulated value of Pi as we calculate it
   mpf_class ten = 10.0;  // We use this constant to handle decimal places
-  mpf_class multiplier = 1.0;  // The multiplier helps us keep track of the place value (like tenths, hundredths, etc.)
+
+  // Digits are emitted one step behind the loop, so the very first value written out is
+  // the initial `predigit` placeholder rather than a real digit of Pi. That placeholder
+  // occupies the tens column, which puts the leading 3 in the units column after it
+  mpf_class multiplier = 10.0;  // Place value of the next digit to be emitted
 
   // Loop through each digit position to calculate the digits of Pi
   for (int j = 1; j <= N; ++j)
