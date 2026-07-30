@@ -273,8 +273,11 @@ mpf_class calculate_pi_gauss_legendre(int precision)
  */
 mpf_class calculate_pi_spigot(int precision)
 {
-  // Calculate one extra digit for proper rounding/truncation handling
-  const int N = precision + 2;  // Set the number of digits of Pi we want to calculate based on the precision parameter
+  // Calculate several digits beyond the ones asked for. A digit that has already been
+  // produced can still be changed by a carry arriving from a later position. Positions
+  // that are never computed can never send that carry, so the last few digits of any
+  // spigot run are unreliable. The extra digits take that damage and are then discarded
+  const int N = precision + 10;  // Set the number of digits of Pi we want to calculate based on the precision parameter
   int len = static_cast<int>(floor(10 * N / 3) + 1);  // Calculate array size based on the number of digits to process
 
   // Initialize the array 'A' to store intermediate values, starting with 2's
