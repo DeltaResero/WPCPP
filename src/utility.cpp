@@ -257,7 +257,17 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
   result.add_line(actual_pi_label + actual_display);
   result.add_line(calculated_pi_label + calc_display);
   result.add_line(arrow_line);
-  result.add_line("First mismatch at: " + to_string(mismatch_idx - 1) + " digit(s) after the decimal");
+
+  // Position 0 holds the leading 3 and position 1 holds the decimal point. A mismatch
+  // at either one means the result is the wrong size altogether, not merely imprecise
+  if (mismatch_idx <= 1)
+  {
+    result.add_line("First mismatch: wrong before the decimal point");
+  }
+  else
+  {
+    result.add_line("First mismatch at: " + to_string(mismatch_idx - 1) + " digit(s) after the decimal");
+  }
 
   return result;
 }
