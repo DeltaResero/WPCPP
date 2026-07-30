@@ -501,7 +501,31 @@ void calculate_and_display_pi(int method, int precision)
   AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision);
 
   // --- New Pagination and Display Loop ---
-  const int page_size = 1200; // A larger page size to better fill the screen
+  // Rows a page of digits cannot use: up to four lines of accuracy report, the blank
+  // line and separator above the digits, the blank line and page counter below them,
+  // the scroll hint, the closing prompt, and one row of slack so that the closing
+  // newline does not scroll the report off the top of the screen. This counts each of
+  // those as a single row, which holds only while none of them wrap. The longest is
+  // the closing prompt at 54 characters and the report caps itself at 60, so a console
+  // narrower than 60 columns would need more rows reserved than this
+  const int reserved_rows = 11;
+
+  // A page that carries on to either side shows an ellipsis there, which needs room
+  const int ellipsis_room = 6;
+
+  // Ask the console how big it is rather than assuming a size. The three TV modes give
+  // three different heights, so any fixed page size is wrong on at least two of them.
+  // A page larger than the screen scrolls the accuracy report away before it is read
+  int console_cols = 0;
+  int console_rows = 0;
+  CON_GetMetrics(&console_cols, &console_rows);
+
+  // Fall back to the smallest of the three TV modes if the console reports nothing
+  // usable, so that the page size below can never come out as zero or negative
+  if (console_cols < 20) { console_cols = 75; }
+  if (console_rows <= reserved_rows) { console_rows = 27; }
+
+  const int page_size = ((console_rows - reserved_rows) * console_cols) - ellipsis_room;
   int total_pages = (pi_full_string.length() + page_size - 1) / page_size;
   if (total_pages == 0) { total_pages = 1; }
   int current_page = 0;
