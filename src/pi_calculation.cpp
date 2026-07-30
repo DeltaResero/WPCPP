@@ -28,18 +28,22 @@ using namespace std;  // Use the entire std namespace for simplicity
  * Computes the arctangent using a Taylor series approximation
  * This function is crucial for the Machin's formula calculation of Pi
  * @param x The value to compute arctangent for
+ * @param precision Number of decimal places the caller needs in the finished result
  * @return The computed arctangent of x
  */
-mpf_class arctan(const mpf_class &x)
+mpf_class arctan(const mpf_class &x, int precision)
 {
   mpf_class result = 0.0;  // The result of the arctangent calculation
   mpf_class term = x;  // The first term in the series is x
   mpf_class x2 = x * x;  // Precompute x^2 to avoid repetitive multiplication
   int n = 1;  // The first term uses n = 1
 
-  // NOTE: In the future, threshold should not be hardcoded
-  // Threshold for stopping the iteration (precision set to 1e-50)
-  mpf_class threshold("1e-50");  // Controls precision vs. performance: adjust this value to change the trade-off
+  // Stop once the terms fall below the digits being asked for. Each term is far smaller
+  // than the one before it, so everything left at that point is too small to reach the
+  // digits on display. The spare places hold the leftovers away from the last digit
+  // shown, which matters because Machin's formula scales this result up by sixteen
+  const int spare_digits = 10;
+  mpf_class threshold("1e-" + to_string(precision + spare_digits));  // Stopping point for the loop below
 
   // Loop while the absolute value of the term is greater than the threshold
   while (term > threshold || term < -threshold)  // Equivalent to abs(term) > threshold
@@ -74,12 +78,13 @@ mpf_class gmp_factorial(int n)
 
 /**
  * Calculates Pi using Machin's formula which approximates Pi using arctangents
+ * @param precision Number of decimal places to calculate
  * @return The calculated value of Pi using Machin's formula
  */
-mpf_class calculate_pi_machin()
+mpf_class calculate_pi_machin(int precision)
 {
   // Machin's formula: Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
-  return 16 * arctan(mpf_class(1) / mpf_class(5)) - 4 * arctan(mpf_class(1) / mpf_class(239));
+  return 16 * arctan(mpf_class(1) / mpf_class(5), precision) - 4 * arctan(mpf_class(1) / mpf_class(239), precision);
 }
 
 /**
@@ -429,7 +434,7 @@ void calculate_and_display_pi(int method, int precision)
       break;
     case 1:
       cout << "Calculating Pi using Machin's Formula Method..." << endl;
-      pi = calculate_pi_machin();
+      pi = calculate_pi_machin(precision);
       break;
     case 2:
       cout << "Calculating Pi using Ramanujan's First Series..." << endl;

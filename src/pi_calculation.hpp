@@ -14,7 +14,7 @@
 
 #include <gmpxx.h>
 
-mpf_class calculate_pi_machin();
+mpf_class calculate_pi_machin(int precision);
 mpf_class calculate_pi_numerical_integration();
 mpf_class calculate_pi_ramanujan(int precision);
 mpf_class calculate_pi_chudnovsky(int precision);
