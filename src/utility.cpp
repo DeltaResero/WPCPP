@@ -70,14 +70,17 @@ void wait_for_user_input_to_return()
  */
 void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
 {
-  // Work with one extra digit of precision to handle rounding properly
-  int working_precision = precision + 1;
+  // Extra decimal places fetched on top of the ones displayed, then thrown away below.
+  // GMP rounds the last place it hands back, and rounding a 9 upward carries into the
+  // place before it. One spare place is not enough, since the carry lands on the last
+  // digit shown. These give the carry somewhere harmless to go
+  const int spare_digits = 8;
 
   // GMP returns the digits with no decimal point in them, along with an exponent
   // saying how many of those digits belong in front of the point. A value of zero
   // is returned as an empty string with an exponent of zero
   mp_exp_t exp;
-  string digits = pi_value.get_str(exp, 10, working_precision + 1);
+  string digits = pi_value.get_str(exp, 10, precision + 1 + spare_digits);
 
   // Separate any minus sign so that it is not mistaken for a digit below
   string sign;
