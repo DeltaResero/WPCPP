@@ -64,13 +64,19 @@ mpf_class arctan(const mpf_class &x, int precision)
  */
 mpf_class gmp_factorial(int n)
 {
-  mpf_class result = 1;  // Initialize result to 1 (as 0! = 1 and 1! = 1)
+  // Build the factorial as a whole number rather than a floating point one. GMP has a
+  // routine built for this, and it beats multiplying up one step at a time. A whole
+  // number also carries every digit, so nothing is rounded away while it is being built
+  mpz_class exact = 1;  // 0! and 1! are both 1, which is what n of zero or less returns
 
-  // Loop to multiply result by each integer from 1 to n
-  for (int i = 1; i <= n; ++i)
+  if (n > 0)
   {
-    result *= i;  // Multiply result by the current value of i
+    mpz_fac_ui(exact.get_mpz_t(), static_cast<unsigned long>(n));
   }
+
+  // Convert to floating point at the very end, so rounding happens once instead of n times
+  mpf_class result;
+  mpf_set_z(result.get_mpf_t(), exact.get_mpz_t());
 
   // Return the final result, which is n!
   return result;
