@@ -157,7 +157,13 @@ mpf_class calculate_pi_ramanujan(int precision)
   mpf_class sum = 0.0;  // Initialize the sum to accumulate series terms
   mpf_class factor = 2 * sqrt(mpf_class(2)) / 9801;  // Precompute the constant factor in Ramanujan's formula
 
-  int iterations = (precision / 8) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
+  // Each term of this series is worth log10(396^4 / 256) decimal places, which
+  // works out at about 7.982 rather than the 8 this used to assume. The shortfall
+  // per term is tiny but it adds up in step with the precision, so it ate through
+  // the two spare terms once around seven thousand places were asked for and the
+  // answer came up short of what was requested. Dividing by a little less than the
+  // true figure leaves a margin that grows with the precision instead of shrinking
+  int iterations = static_cast<int>(precision / 7.9) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
