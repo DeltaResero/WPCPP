@@ -38,14 +38,19 @@ STRIP = $(DEVKITPPC)/bin/powerpc-eabi-strip
 #---------------------------------------------------------------------------------
 # Options for code generation
 #---------------------------------------------------------------------------------
-CFLAGS		:= -O2 -Wall -DGEKKO $(MACHDEP) $(INCLUDE)
+# MACHDEP already carries -DGEKKO, so this does not repeat it
+CFLAGS		:= -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	:= $(CFLAGS)
-LDFLAGS		:= $(MACHDEP) -Wl,-Map,$(notdir $@).map
+# Assign with '=' so that $@ is read when a target is linked. With ':=' it is read
+# here instead, where no target exists yet, and the map file comes out named '.map'
+LDFLAGS		= $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------
 # Any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS		:= -lwiiuse -lbte -logc -lm -lgmp -lgmpxx
+# Order matters for static archives. The linker takes them left to right and only
+# keeps what is unresolved so far, so gmpxx has to come before the gmp it calls into
+LIBS		:= -lwiiuse -lbte -logc -lm -lgmpxx -lgmp
 
 #---------------------------------------------------------------------------------
 # GMP configuration
@@ -86,7 +91,7 @@ else
     export LD := $(CXX)
 endif
 
-export OFILES    := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S:.o)
+export OFILES    := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
 
 #---------------------------------------------------------------------------------
 # Build a list of include paths
@@ -94,15 +99,13 @@ export OFILES    := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES
 export INCLUDE	:= $(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 	           $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 	           -I$(LIBOGC_INC) \
-	           -I$(GMP_INCLUDE_DIR) \
 	           -I$(CURDIR)/$(BUILD)
 
 #---------------------------------------------------------------------------------
 # Build a list of library paths
 #---------------------------------------------------------------------------------
 export LIBPATHS	:= $(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
-	           -L$(LIBOGC_LIB) \
-	           -L$(GMP_INSTALL_PFX)/lib
+	           -L$(LIBOGC_LIB)
 
 .PHONY: $(BUILD) clean distclean all run gmp
 
@@ -111,8 +114,22 @@ all: gmp $(BUILD)
 
 gmp: $(GMP_LIB)
 
+# GMP comes from its git mirror, and that mirror carries no configure script.
+# Only the release tarballs ship one. It has to be generated here first, which
+# is what GMP's own .bootstrap does, and that needs autoconf, automake, libtool
+# and m4 on the machine doing the building
 $(GMP_LIB):
 	@echo "Building GMP library..."
+	@if [ ! -f "$(GMP_DIR)/.bootstrap" ]; then \
+		echo "ERROR: $(GMP_DIR) is empty, so GMP cannot be built."; \
+		echo "Fetch it with: git submodule update --init --recursive"; \
+		exit 1; \
+	fi
+	@cd $(GMP_DIR) && \
+	if [ ! -f "configure" ]; then \
+		echo "Generating GMP's configure script..."; \
+		./.bootstrap; \
+	fi
 	@cd $(GMP_DIR) && \
 	if [ ! -f "Makefile" ]; then \
 		ac_cv_func_obstack_vprintf=no ./configure \

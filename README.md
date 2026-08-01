@@ -28,6 +28,18 @@ system, follow the instructions on the official devkitPro wiki:
 - [Getting Started with devkitPro](https://devkitpro.org/wiki/Getting_Started)
 - [devkitPro Pacman](https://devkitpro.org/wiki/devkitPro_pacman)
 
+GMP is pulled from its Git mirror. That mirror does not carry a `configure`
+script, as only the GMP release tarballs ship one. The build generates it on
+the first run using GMP's own bootstrap script, so the GNU Autotools must be
+installed as well:
+
+| Platform | Command |
+| --- | --- |
+| Debian / Ubuntu | `sudo apt install autoconf automake libtool m4` |
+| Fedora | `sudo dnf install autoconf automake libtool m4` |
+| Arch | `sudo pacman -S --needed base-devel` |
+| macOS (Homebrew) | `brew install autoconf automake libtool m4` |
+
 ### 1. Clone the Repository
 
 To clone the project and its GMP dependency, run the following command. The
@@ -50,10 +62,10 @@ cd WPCPP
 make
 ```
 
-The first time you run `make`, the build system will automatically compile the
-GMP library. This may take several minutes. Subsequent builds will be much
-faster. To speed up compilation, you can run jobs in parallel by replacing
-`make` with `make -j$(nproc)` (on Linux/macOS).
+The first time you run `make`, the build system generates GMP's `configure`
+script and then compiles the GMP library. This may take several minutes.
+Subsequent builds will be much faster. To speed up compilation, you can run
+jobs in parallel by replacing `make` with `make -j$(nproc)` (on Linux/macOS).
 
 The final `WPCPP.dol` file will be created in the project's root directory.
 
@@ -106,10 +118,11 @@ git submodule update --init --recursive
 This project includes the GMP (GNU Multiple Precision Arithmetic Library)
 for arbitrary-precision arithmetic. GMP is licensed under **LGPL v3**.
 
-The library is included as a Git submodule and is automatically configured and
-built from source by the `Makefile` the first time you run `make`. It's not
-necessary to install GMP or any other dependencies manually into your
-devkitPro environment.
+The library is included as a Git submodule and is automatically bootstrapped,
+configured, and built from source by the `Makefile` the first time you run
+`make`. It's not necessary to install GMP itself into your devkitPro
+environment, though the bootstrap step does need the GNU Autotools listed
+under [Prerequisites](#prerequisites).
 
 For more information about GMP, visit the official website:
 <https://gmplib.org/>.
