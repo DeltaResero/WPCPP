@@ -206,7 +206,18 @@ mpf_class calculate_pi_chudnovsky(int precision)
   for (int k = 0; k < iterations; ++k)
   {
     // Calculate the numerator: (6k)! * (13591409 + 545140134k)
-    mpf_class numerator = gmp_factorial(6 * k) * (13591409 + 545140134 * k);
+    // Work the multiplier out as a whole number rather than in plain ints. Once k
+    // reaches four, 545140134 times k passes the largest value an int can hold.
+    // Going past that limit has no defined meaning in C++, so the compiler is free
+    // to do as it likes, and it did: on a 64 bit machine the full value survived in
+    // a register and the answers looked right, while on the Wii it wrapped round to
+    // a negative number and the series fell apart after a handful of terms
+    mpz_class multiplier = 545140134;
+    multiplier = multiplier * k + 13591409;
+
+    mpf_class numerator;
+    mpf_set_z(numerator.get_mpf_t(), multiplier.get_mpz_t());
+    numerator *= gmp_factorial(6 * k);
 
     // Calculate the denominator, composed of three parts: (3k)!, (k!)^3, and (640320)^(3 * k)
     // First, compute (640320)^(3 * k)
