@@ -497,6 +497,50 @@ void calculate_and_display_pi(int method, int precision)
     cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
   }
 
+  // Check the answer before it is shown. The check works the digits out a second
+  // time by a route with nothing in common with the method above, so it can tell
+  // a right answer from a wrong one without any digits of Pi being kept in the
+  // program to compare against
+  cout << "\nVerifying against BBP..." << endl;
+  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision);
+  cout << accuracy_info.get_summary() << endl;
+
+  // The BBP method above and the check just run are the same formula worked two
+  // different ways. Agreement between them shows the arithmetic was carried out
+  // properly, but it could not catch the formula itself being written down
+  // wrongly, since the same mistake would sit on both sides. For that one method
+  // only, work Pi out again by a route with no formula in common and compare.
+  // Gauss-Legendre is hundreds of times quicker than the method it is checking
+  // here, so this costs almost nothing
+  if (method == 6)
+  {
+    mpf_class independent = calculate_pi_gauss_legendre(precision);
+    mpf_class difference = pi - independent;
+
+    if (difference < 0)
+    {
+      difference = -difference;
+    }
+
+    if (difference < mpf_class("1e-" + to_string(precision)))
+    {
+      cout << "Cross-check against Gauss-Legendre: PASS" << endl;
+    }
+    else
+    {
+      cout << "Cross-check against Gauss-Legendre: FAIL" << endl;
+    }
+  }
+
+  // Numerical integration works to a fixed step size rather than to the number
+  // of places asked for, so it runs out of accuracy around fifteen decimal
+  // places however many are requested. Hitting that wall is the method working
+  // as designed, so say so rather than leave it reading like a fault
+  if (method == 0 && accuracy_info.get_mismatch_index() != -1)
+  {
+    cout << "This method is limited to about 15 decimal place(s) by design." << endl;
+  }
+
   // Wait for user to press a button before showing the detailed results
   cout << "\nPress any button to view results..." << endl;
   while (true)
@@ -514,18 +558,15 @@ void calculate_and_display_pi(int method, int precision)
   format_pi(pi, pi_full_str_c, precision);
   string pi_full_string(pi_full_str_c);
 
-  // Get the accuracy report
-  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision);
-
   // --- New Pagination and Display Loop ---
-  // Rows a page of digits cannot use: up to four lines of accuracy report, the blank
+  // Rows a page of digits cannot use: up to three lines of accuracy report, the blank
   // line and separator above the digits, the blank line and page counter below them,
   // the scroll hint, the closing prompt, and one row of slack so that the closing
   // newline does not scroll the report off the top of the screen. This counts each of
   // those as a single row, which holds only while none of them wrap. The longest is
   // the closing prompt at 54 characters and the report caps itself at 60, so a console
   // narrower than 60 columns would need more rows reserved than this
-  const int reserved_rows = 11;
+  const int reserved_rows = 10;
 
   // A page that carries on to either side shows an ellipsis there, which needs room
   const int ellipsis_room = 6;

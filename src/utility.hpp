@@ -47,8 +47,19 @@ public:
     return mismatch_index;
   }
 
+  // Sets the one line verdict shown before the results screen
+  void set_summary(const std::string& text) {
+    summary = text;
+  }
+
+  // Returns the one line verdict
+  const std::string& get_summary() const {
+    return summary;
+  }
+
 private:
   std::vector<std::string> report_lines;
+  std::string summary;  // Verdict shown on its own, ahead of the report lines.
   int mismatch_index; // Character index of the first mismatch, or -1 if none.
 };
 
