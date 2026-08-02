@@ -68,6 +68,9 @@ private:
 
 void exit_WPCPP();
 void wait_for_user_input_to_return();
+void progress_begin(int total_steps, const char *unit);
+void progress_step();
+void progress_end();
 std::string format_duration(double milliseconds);
 std::string format_pi(const mpf_class &pi_value, int precision);
 AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision,

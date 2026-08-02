@@ -13,7 +13,9 @@
 #include "input.hpp"
 #include "verify.hpp"
 #include <iostream>
+#include <iomanip>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <cmath>
 #include <cstdlib>
@@ -61,6 +63,246 @@ void wait_for_user_input_to_return()
       // Wait for video sync to ensure smooth input handling
       VIDEO_WaitVSync();
     }
+}
+
+// Room set aside on the progress line for the estimate. The line is redrawn over
+// itself, so every field on it is padded to a fixed size and the estimate is cut
+// to fit rather than allowed to push the line wider. A line that grew would be
+// too long for the erase below to clear, and a line that wrapped would cost a row
+static const size_t progress_estimate_width = 30;
+
+// State of the progress line. Kept here rather than passed around so that the
+// calculations themselves need no extra arguments to report what they are doing
+static int progress_total = 1;
+static const char *progress_unit = "step";
+static long progress_done = 0;
+static long progress_done_at_last_draw = 0;
+static int progress_draws = 0;
+static int progress_spin = 0;
+static double progress_anchor_seconds = 0.0;
+static long progress_anchor_done = 0;
+static int progress_count_width = 1;
+static size_t progress_line_width = 0;
+static bool progress_running = false;
+static struct timeval progress_start;
+static struct timeval progress_last_draw;
+
+/**
+ * Measures the gap between two readings of the clock
+ * @param from The earlier reading
+ * @param to The later reading
+ * @return The gap in seconds
+ */
+static double progress_seconds_between(const struct timeval &from, const struct timeval &to)
+{
+  return (to.tv_sec - from.tv_sec) + (to.tv_usec - from.tv_usec) / 1000000.0;
+}
+
+/**
+ * Describes how much time is left, in whichever unit suits and to a deliberately
+ * coarse figure. Anyone reading this wants to know whether to wait or walk away,
+ * not to be told a number that turns out to be wrong
+ * @param optimistic Shortest the wait could reasonably be, in seconds
+ * @param pessimistic Longest the wait could reasonably be, in seconds
+ * @return The wait in words, as a single figure when both ends agree
+ */
+static long progress_round_coarse(double value)
+{
+  // Nobody waiting on this needs the odd second. Past ten of any unit the figure
+  // is rounded to the nearest five, which is also what keeps the two ends of the
+  // range landing on the same number when they are close enough not to matter
+  if (value < 10.0)
+  {
+    return lround(value);
+  }
+  return lround(value / 5.0) * 5;
+}
+
+static string progress_estimate_words(double optimistic, double pessimistic)
+{
+  if (lround(pessimistic) < 1)
+  {
+    return "< 1 second left";
+  }
+
+  // Settle the rounding before choosing the unit, so a wait a shade under a
+  // minute is not announced as sixty seconds
+  const char *unit = "hour(s)";
+  double divisor = 3600.0;
+  if (lround(pessimistic) < 60)
+  {
+    unit = "second(s)";
+    divisor = 1.0;
+  }
+  else if (lround(pessimistic / 60.0) < 60)
+  {
+    unit = "minute(s)";
+    divisor = 60.0;
+  }
+
+  long high = progress_round_coarse(pessimistic / divisor);
+  long low = progress_round_coarse(optimistic / divisor);
+  if (high < 1) { high = 1; }
+  if (low > high) { low = high; }
+
+  // Both ends landed on the same figure, so there is no range worth showing
+  if (low == high)
+  {
+    return "about " + to_string(high) + " " + unit + " left";
+  }
+
+  // The shortest end rounds away to nothing in this unit, leaving a ceiling
+  // rather than a range
+  if (low < 1)
+  {
+    return "under " + to_string(high) + " " + unit + " left";
+  }
+
+  return "about " + to_string(low) + " to " + to_string(high) + " " + unit + " left";
+}
+
+/**
+ * Draws the progress line over the top of itself
+ * @param estimate The wait in words, or empty while there is nothing to say yet
+ */
+static void progress_draw(const string &estimate)
+{
+  static const char spinner[] = { '|', '/', '-', '\\' };
+
+  // Never claim to be further along than the total, since the count for Machin's
+  // formula is worked out in advance and can be short by a term or two
+  long shown = progress_done;
+  if (shown > progress_total) { shown = progress_total; }
+
+  string words = estimate;
+  if (words.length() > progress_estimate_width)
+  {
+    words.resize(progress_estimate_width);
+  }
+
+  cout << "\r[" << spinner[progress_spin & 3] << "] "
+       << left << setw(5) << progress_unit << " "
+       << right << setw(progress_count_width) << shown
+       << " of " << setw(progress_count_width) << progress_total << "  "
+       << left << setw(static_cast<int>(progress_estimate_width)) << words
+       << right;
+  cout.flush();
+}
+
+/**
+ * Starts reporting progress. Draws straight away rather than waiting, so that
+ * pressing 'A' is answered immediately even when the work turns out to be quick
+ * @param total_steps How many steps the work is expected to take
+ * @param unit What one step is, named on the line: "digit", "term", "pass", "step"
+ */
+void progress_begin(int total_steps, const char *unit)
+{
+  progress_total = (total_steps > 0) ? total_steps : 1;
+  progress_unit = (unit != nullptr) ? unit : "step";
+  progress_done = 0;
+  progress_done_at_last_draw = 0;
+  progress_spin = 0;
+  progress_count_width = static_cast<int>(to_string(progress_total).length());
+
+  // Fixed part of the line, then both counts, then the estimate. Kept so that
+  // ending the line can wipe exactly as much as was written
+  progress_line_width = 16 + (2 * static_cast<size_t>(progress_count_width))
+    + progress_estimate_width;
+
+  gettimeofday(&progress_start, nullptr);
+  progress_last_draw = progress_start;
+  progress_running = true;
+
+  progress_draw("");
+  progress_draws = 1;
+}
+
+/**
+ * Records one step of work and redraws the line about once a second. Called from
+ * inside the calculation loops, so it does as little as possible: one reading of
+ * the clock, which comes straight off the processor's own counter
+ */
+void progress_step()
+{
+  if (!progress_running)
+  {
+    return;
+  }
+
+  progress_done++;
+
+  struct timeval now;
+  gettimeofday(&now, nullptr);
+  const double since_draw = progress_seconds_between(progress_last_draw, now);
+  if (since_draw < 1.0)
+  {
+    return;
+  }
+
+  string estimate;
+
+  const double since_start = progress_seconds_between(progress_start, now);
+  const long steps_since_draw = progress_done - progress_done_at_last_draw;
+  const long remaining = progress_total - progress_done;
+
+  // Keep the first drawn line as a fixed point to measure against. Two readings
+  // taken a while apart are what makes the shape of the work visible
+  if (progress_draws == 1)
+  {
+    progress_anchor_seconds = since_start;
+    progress_anchor_done = progress_done;
+  }
+  else if (steps_since_draw > 0 && remaining > 0
+           && progress_done > progress_anchor_done
+           && since_start > progress_anchor_seconds && progress_anchor_seconds > 0)
+  {
+    // Some methods cost the same on every step while others get steadily dearer,
+    // and guessing which is which was wrong often enough to matter. So measure it
+    // instead. Comparing how much longer the work has run against how many more
+    // steps it has managed says how sharply the cost is climbing, and that one
+    // figure describes both sorts: it comes out at one for steady work and higher
+    // for work that is slowing down. Nothing here is told which method it is in
+    double climb = log(since_start / progress_anchor_seconds)
+      / log(static_cast<double>(progress_done) / static_cast<double>(progress_anchor_done));
+    if (climb < 1.0) { climb = 1.0; }
+    if (climb > 4.0) { climb = 4.0; }
+
+    // Steady work would simply finish in proportion to the steps left. Work that
+    // is climbing has to allow for the steps left being dearer than the ones done
+    const double share_left = static_cast<double>(progress_total) / static_cast<double>(progress_done);
+    const double allowing_for_climb = since_start * (pow(share_left, climb) - 1.0);
+
+    // The nearer end assumes the current speed simply holds, which is right for
+    // steady work and hopeful for anything else
+    const double at_current_speed = remaining / (steps_since_draw / since_draw);
+
+    estimate = progress_estimate_words(
+      (at_current_speed < allowing_for_climb) ? at_current_speed : allowing_for_climb,
+      (at_current_speed < allowing_for_climb) ? allowing_for_climb : at_current_speed);
+  }
+
+  progress_draw(estimate);
+
+  progress_spin++;
+  progress_draws++;
+  progress_last_draw = now;
+  progress_done_at_last_draw = progress_done;
+}
+
+/**
+ * Wipes the progress line and stops reporting. Nothing is left on screen
+ * suggesting work is still going on once it has finished
+ */
+void progress_end()
+{
+  if (!progress_running)
+  {
+    return;
+  }
+
+  progress_running = false;
+  cout << "\r" << string(progress_line_width, ' ') << "\r";
+  cout.flush();
 }
 
 /**

@@ -31,6 +31,29 @@ using namespace std;  // Use the entire std namespace for simplicity
  * @param precision Number of decimal places the caller needs in the finished result
  * @return The computed arctangent of x
  */
+// Places arctan works to beyond the ones asked for. Each term is far smaller than
+// the one before it, so everything left when the terms fall below this is too small
+// to reach the digits on display. The spare places hold the leftovers away from the
+// last digit shown, which matters because Machin's formula scales the result up by
+// sixteen. The count below needs this same figure, so it lives out here
+static const int arctan_spare_digits = 10;
+
+/**
+ * Works out roughly how many terms arctan will need for a given value
+ * @param x The value arctan will be given
+ * @param precision Number of decimal places the caller needs in the finished result
+ * @return The expected number of terms, used to size the progress line
+ */
+static int arctan_term_count(double x, int precision)
+{
+  // Every term is smaller than the one before it by a factor of x squared, so the
+  // places gained per term is twice the log of one over x. For a fifth that is
+  // about one and four tenths places a term, and for a two hundred and thirty
+  // ninth it is nearer five
+  const double places_per_term = 2.0 * log10(1.0 / x);
+  return static_cast<int>((precision + arctan_spare_digits) / places_per_term) + 1;
+}
+
 mpf_class arctan(const mpf_class &x, int precision)
 {
   mpf_class result = 0.0;  // The result of the arctangent calculation
@@ -38,12 +61,7 @@ mpf_class arctan(const mpf_class &x, int precision)
   mpf_class x2 = x * x;  // Precompute x^2 to avoid repetitive multiplication
   int n = 1;  // The first term uses n = 1
 
-  // Stop once the terms fall below the digits being asked for. Each term is far smaller
-  // than the one before it, so everything left at that point is too small to reach the
-  // digits on display. The spare places hold the leftovers away from the last digit
-  // shown, which matters because Machin's formula scales this result up by sixteen
-  const int spare_digits = 10;
-  mpf_class threshold("1e-" + to_string(precision + spare_digits));  // Stopping point for the loop below
+  mpf_class threshold("1e-" + to_string(precision + arctan_spare_digits));  // Stopping point for the loop below
 
   // Loop while the absolute value of the term is greater than the threshold
   while (term > threshold || term < -threshold)  // Equivalent to abs(term) > threshold
@@ -51,6 +69,7 @@ mpf_class arctan(const mpf_class &x, int precision)
     result += term;  // Add the current term to the result
     n += 2;  // Increase n by 2 (since the series uses odd numbers)
     term *= -x2 * (n - 2) / n;  // Compute the next term efficiently without recalculating powers
+    progress_step();
   }
 
   return result;  // Return the final result of the arctangent
@@ -89,8 +108,17 @@ mpf_class gmp_factorial(int n)
  */
 mpf_class calculate_pi_machin(int precision)
 {
+  // One run of the progress line across both arctans, since counting up to the end
+  // twice over would look as though the work had started again from scratch
+  progress_begin(arctan_term_count(1.0 / 5.0, precision)
+    + arctan_term_count(1.0 / 239.0, precision), "term");
+
   // Machin's formula: Pi = 16 * arctan(1/5) - 4 * arctan(1/239)
-  return 16 * arctan(mpf_class(1) / mpf_class(5), precision) - 4 * arctan(mpf_class(1) / mpf_class(239), precision);
+  mpf_class result = 16 * arctan(mpf_class(1) / mpf_class(5), precision)
+    - 4 * arctan(mpf_class(1) / mpf_class(239), precision);
+
+  progress_end();
+  return result;
 }
 
 /**
@@ -116,6 +144,11 @@ mpf_class calculate_pi_numerical_integration()
 
   int batch_count = 0;  // Counter to track iterations in the current batch
 
+  // Report a batch at a time rather than a step at a time. The loop below runs
+  // over twenty seven million times, so checking the clock inside it would cost
+  // more than the sum it is there to work out
+  progress_begin(static_cast<int>((a - dx) / dx) / batch_size, "step");
+
   // Loop through intervals for area approximation with adaptive step size
   for (double x = dx; x <= a - dx; x += dx)
   {
@@ -128,8 +161,11 @@ mpf_class calculate_pi_numerical_integration()
       sum_gmp += batch_sum;  // Accumulate in GMP
       batch_sum = 0.0;  // Reset batch sum for the next batch
       batch_count = 0;  // Reset counter
+      progress_step();
     }
   }
+
+  progress_end();
 
   // Add any remaining sum from the last batch, if present
   if (batch_sum != 0.0)
@@ -165,9 +201,13 @@ mpf_class calculate_pi_ramanujan(int precision)
   // true figure leaves a margin that grows with the precision instead of shrinking
   int iterations = static_cast<int>(precision / 7.9) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
+  progress_begin(iterations, "term");
+
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
   {
+    progress_step();
+
     // Calculate the numerator: (4k)! * (1103 + 26390k)
     mpf_class numerator = gmp_factorial(4 * k) * (1103 + 26390 * k);
 
@@ -189,6 +229,8 @@ mpf_class calculate_pi_ramanujan(int precision)
     sum += numerator / denominator;
   }
 
+  progress_end();
+
   // Final step: Pi is calculated as 1 / (factor * sum)
   return 1 / (factor * sum);
 }
@@ -208,9 +250,13 @@ mpf_class calculate_pi_chudnovsky(int precision)
 
   int iterations = (precision / 14) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
+  progress_begin(iterations, "term");
+
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
   {
+    progress_step();
+
     // Calculate the numerator: (6k)! * (13591409 + 545140134k)
     // Work the multiplier out as a whole number rather than in plain ints. Once k
     // reaches four, 545140134 times k passes the largest value an int can hold.
@@ -247,6 +293,8 @@ mpf_class calculate_pi_chudnovsky(int precision)
     }
   }
 
+  progress_end();
+
   // Final step: Pi is calculated as C / sum
   return C / sum;
 }
@@ -267,9 +315,13 @@ mpf_class calculate_pi_gauss_legendre(int precision)
 
   int iterations = static_cast<int>(ceil(log2(precision))) + 2;  // Number of iterations controls the precision of the result (precision vs. performance)
 
+  progress_begin(iterations, "pass");
+
   // Loop through the iterative process to refine a, b, t, and p
   for (int i = 0; i < iterations; ++i)
   {
+    progress_step();
+
     // Calculate the next value of a as the average of a and b
     mpf_class a_next = (a + b) / 2;
 
@@ -287,6 +339,8 @@ mpf_class calculate_pi_gauss_legendre(int precision)
     b = b_next;
     t = t_next;
   }
+
+  progress_end();
 
   // Final step: Pi is calculated as (a + b)^2 / (4 * t)
   return (a + b) * (a + b) / (4 * t);
@@ -323,9 +377,15 @@ mpf_class calculate_pi_spigot(int precision)
   // occupies the tens column, which puts the leading 3 in the units column after it
   mpf_class multiplier = 10.0;  // Place value of the next digit to be emitted
 
+  // This loop works out one digit of Pi per turn, so the count on the progress
+  // line is not a stand in for progress, it is the digit being worked on
+  progress_begin(N, "digit");
+
   // Loop through each digit position to calculate the digits of Pi
   for (int j = 1; j <= N; ++j)
   {
+    progress_step();
+
     int q = 0;  // `q` will store the quotient for the current step
 
     // Process each element of array `A` to generate the next digit
@@ -379,6 +439,8 @@ mpf_class calculate_pi_spigot(int precision)
     }
   }
 
+  progress_end();
+
   // Final step: Add the last digit and ensure the last one isn't missed
   pi += predigit * multiplier;
 
@@ -408,9 +470,13 @@ mpf_class calculate_pi_bbp(int precision)
   mpf_class scaled;  // The current term after it has been scaled down by 16^k
   int iterations = static_cast<int>(precision / 1.2) + 2;  // Number of iterations (terms) to calculate. More terms yield higher precision
 
+  progress_begin(iterations, "term");
+
   // Loop through each term in the BBP series to accumulate the value of Pi
   for (int k = 0; k < iterations; ++k)
   {
+    progress_step();
+
     // Compute the current term of the BBP series.
     mpf_class term = (mpf_class(4) / (8 * k + 1))  // The first part of the BBP term
                    - (mpf_class(2) / (8 * k + 4))  // The second part
@@ -431,6 +497,7 @@ mpf_class calculate_pi_bbp(int precision)
     pi += scaled;  // Add the scaled term to the running total
   }
 
+  progress_end();
   return pi;  // Return the calculated value of Pi
 }
 
