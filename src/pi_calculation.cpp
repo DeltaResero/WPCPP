@@ -405,8 +405,7 @@ mpf_class calculate_pi_spigot(int precision)
 mpf_class calculate_pi_bbp(int precision)
 {
   mpf_class pi = 0.0;  // Initialize the result `pi` to store the value of Pi as it is calculated
-  mpf_class sixteen = 16.0;  // The base (16) used in the BBP formula
-  mpf_class temp;  // Temporary variable to store intermediate results of 16^(-k)
+  mpf_class scaled;  // The current term after it has been scaled down by 16^k
   int iterations = static_cast<int>(precision / 1.2) + 2;  // Number of iterations (terms) to calculate. More terms yield higher precision
 
   // Loop through each term in the BBP series to accumulate the value of Pi
@@ -418,11 +417,18 @@ mpf_class calculate_pi_bbp(int precision)
                    - (mpf_class(1) / (8 * k + 5))  // The third part
                    - (mpf_class(1) / (8 * k + 6));  // The fourth part
 
-    // Compute 16^(-k) using GMP's `mpf_pow_ui`.
-    mpf_pow_ui(temp.get_mpf_t(), sixteen.get_mpf_t(), k);  // Calculate 16^k and store it in `temp`
+    // Divide the term by 16^k. Sixteen is two to the fourth, so dividing by 16^k
+    // means shifting the binary point along by 4k places and nothing else. GMP
+    // stores the exponent separately from the digits, so this only adjusts the
+    // exponent and leaves the digits untouched. Building 16^k as a number and
+    // dividing by it instead would cost a pile of full length multiplications per
+    // term, and would be less accurate as well: 16^k needs 4k bits to write down
+    // exactly, which outgrows the working precision partway through the series,
+    // so every later term would be divided by a slightly rounded number
+    mpf_div_2exp(scaled.get_mpf_t(), term.get_mpf_t(),
+                 4UL * static_cast<mp_bitcnt_t>(k));
 
-    // Add the current term, divided by 16^k, to Pi
-    pi += term / temp;  // Add the term divided by 16^k to the running total
+    pi += scaled;  // Add the scaled term to the running total
   }
 
   return pi;  // Return the calculated value of Pi
