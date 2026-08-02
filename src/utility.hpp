@@ -20,7 +20,7 @@
 // the number appears so it is the only line to edit when the limit moves.
 // Nothing enforces it though. Past roughly two million digits the console
 // runs out of memory long before the verifier runs out of accuracy
-#define MAX_PI_DIGITS 1000
+#define MAX_PI_DIGITS 10000
 
 // A class to hold the results of the accuracy comparison.
 // Encapsulates the report lines and mismatch index.
