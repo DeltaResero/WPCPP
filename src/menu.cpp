@@ -40,11 +40,6 @@ int method_selection_menu()
   int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);
   int selected_index = 0;
 
-  // Track the previous state of buttons to detect state changes
-  bool button_right_last = false;
-  bool button_left_last = false;
-  bool button_a_last = false;
-
   // Clear the screen and display instructions
   cout << "\x1b[2J"; // ANSI escape code to clear the screen
   cout << "Select Pi Calculation Method:\n";
@@ -61,13 +56,15 @@ int method_selection_menu()
     // Poll inputs once per loop iteration to update the global input states
     poll_inputs();
 
-    // Check if navigation buttons are pressed
+    // Check which buttons have just gone down. is_button_just_pressed reports only
+    // the moment a button changes from released to held, so each of these is true for
+    // a single pass of the loop no matter how long the button is held down
     bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
     bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
     // Navigate to the right method
-    if (button_right_down && !button_right_last)
+    if (button_right_down)
     {
       if (selected_index < num_methods - 1)  // Ensure it doesn't go out of bounds
       {
@@ -76,7 +73,7 @@ int method_selection_menu()
     }
 
     // Navigate to the left method
-    if (button_left_down && !button_left_last)
+    if (button_left_down)
     {
       if (selected_index > 0)  // Ensure it doesn't go below 0
       {
@@ -84,22 +81,15 @@ int method_selection_menu()
       }
     }
 
-    // Update last button states for the next iteration
-    button_right_last = button_right_down;
-    button_left_last = button_left_down;
-
     // Clear the previous line by overwriting it with spaces, then reprint the currently selected method
     cout << "\rCurrently Selected: " << string(max_length, ' ') << "\r";  // Clear previous line
     cout << "Currently Selected: " << pi_methods[selected_index] << "\r"; // Print new selection
 
     // Confirm selection when 'A' button is pressed
-    if (button_a_down && !button_a_last)
+    if (button_a_down)
     {
       return selected_index;  // Return the selected method index
     }
-
-    // Update the last state of the 'A' button
-    button_a_last = button_a_down;
 
     // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit
     if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
@@ -128,13 +118,6 @@ int precision_selection_menu()
   // would leave the tail of the old line sitting on screen
   const int field_width = static_cast<int>(to_string(MAX_PI_DIGITS).length());
 
-  // Track the previous state of buttons to detect state changes
-  bool button_a_last = false;
-  bool button_l_last = false;
-  bool button_r_last = false;
-  bool button_left_last = false;
-  bool button_right_last = false;
-
   // Clear the screen and display instructions
   cout << "\x1b[2J";  // ANSI escape code to clear the screen
   cout << "Select Pi Precision (1-" << MAX_PI_DIGITS << " decimal places):\n";
@@ -149,7 +132,9 @@ int precision_selection_menu()
     // Poll inputs once per loop iteration to update the global input states
     poll_inputs();
 
-    // Check if specific buttons are pressed
+    // Check which buttons have just gone down. is_button_just_pressed reports only
+    // the moment a button changes from released to held, so each of these is true for
+    // a single pass of the loop no matter how long the button is held down
     bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
     bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
     bool button_l_down = is_button_just_pressed(PAD_TRIGGER_L, WPAD_BUTTON_MINUS);
@@ -157,7 +142,7 @@ int precision_selection_menu()
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
     // Cycle the step size down one power of ten
-    if (button_l_down && !button_l_last)
+    if (button_l_down)
     {
       if (step_size > 1)
       {
@@ -168,7 +153,7 @@ int precision_selection_menu()
     // Cycle the step size up one power of ten. The ladder stops at the cap itself,
     // since a step larger than the whole range could only ever land on the two ends.
     // Growing it with the cap is what keeps the top reachable in a few presses
-    if (button_r_down && !button_r_last)
+    if (button_r_down)
     {
       if (step_size * 10 <= MAX_PI_DIGITS)
       {
@@ -177,7 +162,7 @@ int precision_selection_menu()
     }
 
     // Decrease precision, ensuring it stays >= 1
-    if (button_left_down && !button_left_last)
+    if (button_left_down)
     {
       precision -= step_size;
       if (precision < 1)
@@ -187,7 +172,7 @@ int precision_selection_menu()
     }
 
     // Increase precision, ensuring it stays within the cap
-    if (button_right_down && !button_right_last)
+    if (button_right_down)
     {
       precision += step_size;
       if (precision > MAX_PI_DIGITS)
@@ -196,24 +181,15 @@ int precision_selection_menu()
       }
     }
 
-    // Update last button states for the next iteration
-    button_l_last = button_l_down;
-    button_r_last = button_r_down;
-    button_left_last = button_left_down;
-    button_right_last = button_right_down;
-
     // Display the current precision and step size
     cout << "\rCurrent Precision: " << setw(field_width) << precision
          << " decimal places (Step Size: " << setw(field_width) << step_size << ")\r";
 
     // Confirm selection when 'A' button is pressed
-    if (button_a_down && !button_a_last)
+    if (button_a_down)
     {
       return precision;  // Return the selected precision
     }
-
-    // Update the last state of the 'A' button
-    button_a_last = button_a_down;
 
     // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit
     if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
