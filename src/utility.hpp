@@ -67,7 +67,6 @@ private:
 };
 
 void exit_WPCPP();
-void wait_for_user_input_to_return();
 void progress_begin(int total_steps, const char *unit);
 void progress_step();
 void progress_end();

@@ -10,19 +10,15 @@
 // (at your option) any later version.
 
 #include "utility.hpp"
-#include "input.hpp"
 #include "verify.hpp"
 #include <iostream>
 #include <iomanip>
 #include <time.h>
 #include <sys/time.h>
-#include <unistd.h>
 #include <cmath>
 #include <cstdlib>
 #include <ogcsys.h>
 #include <string>
-#include <vector>
-#include <algorithm>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
@@ -44,25 +40,6 @@ void exit_WPCPP()
 
   // Fallback in case the system reset fails
   exit(1);
-}
-
-void wait_for_user_input_to_return()
-{
-    std::cout << "Press any button to return to the menu." << std::endl;
-    while (true)
-    {
-      // Update the input states
-      poll_inputs();
-
-      // Check if any button on the GameCube controller or Wii Remote is pressed
-      if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
-      {
-        break;
-      }
-
-      // Wait for video sync to ensure smooth input handling
-      VIDEO_WaitVSync();
-    }
 }
 
 // Room set aside on the progress line for the estimate. The line is redrawn over

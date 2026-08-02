@@ -14,7 +14,6 @@
 
 #include <gccore.h>
 #include <wiiuse/wpad.h>
-#include <utility>
 
 void initialize_inputs();
 void poll_inputs();
