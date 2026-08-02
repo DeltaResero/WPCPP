@@ -572,9 +572,7 @@ void calculate_and_display_pi(int method, int precision)
   }
 
   // Get the full string representation of Pi for pagination
-  char pi_full_str_c[TOTAL_LENGTH];
-  format_pi(pi, pi_full_str_c, precision);
-  string pi_full_string(pi_full_str_c);
+  const string pi_full_string = format_pi(pi, precision);
 
   // --- New Pagination and Display Loop ---
   // Rows a page of digits cannot use: up to three lines of accuracy report, the blank

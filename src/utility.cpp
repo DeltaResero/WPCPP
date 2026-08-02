@@ -16,7 +16,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 #include <ogcsys.h>
 #include <string>
@@ -67,10 +66,10 @@ void wait_for_user_input_to_return()
 /**
  * Formats the Pi value into a string with a specified number of decimal places
  * @param pi_value The Pi value to format
- * @param pi_str The string buffer where the formatted Pi will be stored
  * @param precision Number of decimal places to format Pi
+ * @return The formatted value, as long as the precision asks for
  */
-void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
+string format_pi(const mpf_class &pi_value, int precision)
 {
   // Extra decimal places fetched on top of the ones displayed, then thrown away below.
   // GMP rounds the last place it hands back, and rounding a 9 upward carries into the
@@ -105,9 +104,9 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
   {
     exp = -static_cast<mp_exp_t>(precision);
   }
-  if (exp > static_cast<mp_exp_t>(TOTAL_LENGTH))
+  if (exp > static_cast<mp_exp_t>(MAX_PI_DIGITS))
   {
-    exp = static_cast<mp_exp_t>(TOTAL_LENGTH);
+    exp = static_cast<mp_exp_t>(MAX_PI_DIGITS);
   }
 
   // Place the decimal point where the exponent says it belongs
@@ -135,8 +134,7 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
   size_t point = formatted.find('.');
   formatted.resize(point + 1 + static_cast<size_t>(precision), '0');
 
-  // Copy to output buffer
-  snprintf(pi_str, TOTAL_LENGTH, "%s", formatted.c_str());
+  return formatted;
 }
 
 /**
@@ -169,10 +167,7 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
     return result;
   }
 
-  // Buffer for the string representation of Pi
-  char calculated_str_c[TOTAL_LENGTH];
-  format_pi(calculated_pi, calculated_str_c, precision);
-  string calculated_str(calculated_str_c);
+  const string calculated_str = format_pi(calculated_pi, precision);
 
   const string calculated_pi_label = "Calculated Pi: ";
   const size_t max_line_width = 60;

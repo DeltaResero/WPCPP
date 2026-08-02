@@ -18,11 +18,9 @@
 
 // The most decimal places the program will calculate. This is the only place
 // the number appears so it is the only line to edit when the limit moves.
-// Nothing enforces it though. Every buffer below grows to match it. Past
-// roughly two million digits the console runs out of memory long before the
-// verifier runs out of accuracy
+// Nothing enforces it though. Past roughly two million digits the console
+// runs out of memory long before the verifier runs out of accuracy
 #define MAX_PI_DIGITS 1000
-#define TOTAL_LENGTH (MAX_PI_DIGITS + 3)  // '3.' + digits + null terminator
 
 // A class to hold the results of the accuracy comparison.
 // Encapsulates the report lines and mismatch index.
@@ -70,7 +68,7 @@ private:
 
 void exit_WPCPP();
 void wait_for_user_input_to_return();
-void format_pi(const mpf_class &pi_value, char *pi_str, int precision);
+std::string format_pi(const mpf_class &pi_value, int precision);
 AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision,
                                    const std::string &method_name);
 
