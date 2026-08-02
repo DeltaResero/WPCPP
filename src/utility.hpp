@@ -68,6 +68,7 @@ private:
 
 void exit_WPCPP();
 void wait_for_user_input_to_return();
+std::string format_duration(double milliseconds);
 std::string format_pi(const mpf_class &pi_value, int precision);
 AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision,
                                    const std::string &method_name);

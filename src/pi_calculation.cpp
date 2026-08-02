@@ -518,7 +518,7 @@ void calculate_and_display_pi(int method, int precision)
   }
   else
   {
-    cout << "Time taken: " << time_taken << " millisecond(s)" << endl;
+    cout << "Time taken: " << format_duration(time_taken) << endl;
   }
 
   // Check the answer before it is shown. The check works the digits out a second

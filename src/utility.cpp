@@ -64,6 +64,59 @@ void wait_for_user_input_to_return()
 }
 
 /**
+ * Turns a length of time into words, choosing units to suit its size
+ * @param milliseconds The length of time to describe
+ * @return The time written out, from thousandths of a second up to hours
+ */
+string format_duration(double milliseconds)
+{
+  if (milliseconds < 0)
+  {
+    milliseconds = 0;
+  }
+
+  const long whole_ms = lround(milliseconds);
+
+  // The quickest methods finish in a fraction of a millisecond, and a whole
+  // number would report those as no time at all
+  if (whole_ms < 10)
+  {
+    const long tenths = lround(milliseconds * 10.0);
+    return to_string(tenths / 10) + "." + to_string(tenths % 10) + " millisecond(s)";
+  }
+
+  if (whole_ms < 1000)
+  {
+    return to_string(whole_ms) + " millisecond(s)";
+  }
+
+  // Round to a tenth of a second before deciding whether this is still seconds.
+  // Deciding first would report a hair under a minute as sixty seconds
+  const long tenths = lround(milliseconds / 100.0);
+  if (tenths < 600)
+  {
+    return to_string(tenths / 10) + "." + to_string(tenths % 10) + " second(s)";
+  }
+
+  const long total_seconds = lround(milliseconds / 1000.0);
+  const long hours = total_seconds / 3600;
+  const long minutes = (total_seconds % 3600) / 60;
+  const long seconds = total_seconds % 60;
+
+  const string minutes_and_seconds = to_string(minutes) + " minute(s) "
+    + to_string(seconds) + " second(s)";
+
+  // Hours are here so the scale never needs revisiting, not because anything
+  // reaches them today
+  if (hours == 0)
+  {
+    return minutes_and_seconds;
+  }
+
+  return to_string(hours) + " hour(s) " + minutes_and_seconds;
+}
+
+/**
  * Formats the Pi value into a string with a specified number of decimal places
  * @param pi_value The Pi value to format
  * @param precision Number of decimal places to format Pi
