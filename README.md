@@ -11,9 +11,13 @@ with additional functionality.
 
 As the Wii’s floating-point hardware supports only **double precision**, this
 program could initially only display up to about **14 decimal places of Pi**.
-To support higher precision and accurately calculate up to **1000 decimal
+To support higher precision and accurately calculate up to **10000 decimal
 places** of [Pi (π)](https://en.wikipedia.org/wiki/Pi), we now rely on the
 external [GNU Multiple Precision Arithmetic Library (GMP)](https://gmplib.org).
+
+Numerical Integration is the exception. It works in the Wii’s own floating
+point rather than in GMP, so it stops at around **12 decimal places** no matter
+what precision is asked for. The results screen says so when it happens.
 
 <br>
 
