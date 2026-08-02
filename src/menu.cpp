@@ -14,6 +14,7 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 #include <iostream>
+#include <iomanip>
 #include "input.hpp"
 
 using namespace std;  // Use the entire std namespace for simplicity
@@ -114,12 +115,18 @@ int method_selection_menu()
 /**
  * Displays a precision selection screen to allow the user to choose the number
  * of decimal places for the Pi calculation
- * @return The selected precision (between 1 and 1000 decimal places)
+ * @return The selected precision (between 1 and MAX_PI_DIGITS decimal places)
  */
 int precision_selection_menu()
 {
   int precision = 50;  // Start with default precision
   int step_size = 1;   // Initial step size for adjusting precision
+
+  // Digits in the largest number either field below can show. The status line is
+  // redrawn over itself, so both numbers are padded to this width to keep the line
+  // one constant length. Without that, dropping from a long number to a short one
+  // would leave the tail of the old line sitting on screen
+  const int field_width = static_cast<int>(to_string(MAX_PI_DIGITS).length());
 
   // Track the previous state of buttons to detect state changes
   bool button_a_last = false;
@@ -130,9 +137,9 @@ int precision_selection_menu()
 
   // Clear the screen and display instructions
   cout << "\x1b[2J";  // ANSI escape code to clear the screen
-  cout << "Select Pi Precision (1-1000 decimal places):\n";
+  cout << "Select Pi Precision (1-" << MAX_PI_DIGITS << " decimal places):\n";
   cout << "Use Left/Right on the D-pad to adjust.\n";
-  cout << "Press 'L'/'R' or '-'/'+' to change the stepping size (1, 10, 100).\n";
+  cout << "Press 'L'/'R' or '-'/'+' to change the stepping size.\n";
   cout << "Press 'A' to confirm.\n";
   cout << "Press 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
 
@@ -149,29 +156,23 @@ int precision_selection_menu()
     bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
 
-    // Cycle step size down (100 -> 10 -> 1)
+    // Cycle the step size down one power of ten
     if (button_l_down && !button_l_last)
     {
-      if (step_size == 100)
+      if (step_size > 1)
       {
-        step_size = 10;
-      }
-      else if (step_size == 10)
-      {
-        step_size = 1;
+        step_size /= 10;
       }
     }
 
-    // Cycle step size up (1 -> 10 -> 100)
+    // Cycle the step size up one power of ten. The ladder stops at the cap itself,
+    // since a step larger than the whole range could only ever land on the two ends.
+    // Growing it with the cap is what keeps the top reachable in a few presses
     if (button_r_down && !button_r_last)
     {
-      if (step_size == 1)
+      if (step_size * 10 <= MAX_PI_DIGITS)
       {
-        step_size = 10;
-      }
-      else if (step_size == 10)
-      {
-        step_size = 100;
+        step_size *= 10;
       }
     }
 
@@ -185,13 +186,13 @@ int precision_selection_menu()
       }
     }
 
-    // Increase precision, ensuring it stays <= 1000
+    // Increase precision, ensuring it stays within the cap
     if (button_right_down && !button_right_last)
     {
       precision += step_size;
-      if (precision > 1000)
+      if (precision > MAX_PI_DIGITS)
       {
-        precision = 1000;
+        precision = MAX_PI_DIGITS;
       }
     }
 
@@ -202,7 +203,8 @@ int precision_selection_menu()
     button_right_last = button_right_down;
 
     // Display the current precision and step size
-    cout << "\rCurrent Precision: " << precision << " decimal places  (Step Size: " << step_size << ")     \r";
+    cout << "\rCurrent Precision: " << setw(field_width) << precision
+         << " decimal places (Step Size: " << setw(field_width) << step_size << ")\r";
 
     // Confirm selection when 'A' button is pressed
     if (button_a_down && !button_a_last)

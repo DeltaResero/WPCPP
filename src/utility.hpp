@@ -16,6 +16,11 @@
 #include <string>
 #include <vector>
 
+// The most decimal places the program will calculate. This is the only place
+// the number appears so it is the only line to edit when the limit moves.
+// Nothing enforces it though. Every buffer below grows to match it. Past
+// roughly two million digits the console runs out of memory long before the
+// verifier runs out of accuracy
 #define MAX_PI_DIGITS 1000
 #define TOTAL_LENGTH (MAX_PI_DIGITS + 3)  // '3.' + digits + null terminator
 
