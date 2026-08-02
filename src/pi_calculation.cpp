@@ -585,7 +585,8 @@ void calculate_and_display_pi(int method, int precision)
   // columns would need more rows reserved than this
   const int reserved_rows = 11;
 
-  // A page that carries on to either side shows an ellipsis there, which needs room
+  // A page that carries on to either side shows an ellipsis there, which needs room.
+  // The first page spends two of these on the "3." it carries ahead of its digits
   const int ellipsis_room = 6;
 
   // Ask the console how big it is rather than assuming a size. The three TV modes give
@@ -600,8 +601,18 @@ void calculate_and_display_pi(int method, int precision)
   if (console_cols < 20) { console_cols = 75; }
   if (console_rows <= reserved_rows) { console_rows = 27; }
 
-  const int page_size = ((console_rows - reserved_rows) * console_cols) - ellipsis_room;
-  int total_pages = (pi_full_string.length() + page_size - 1) / page_size;
+  // How many digits one screenful holds. Pages are counted in digits rather than
+  // characters so that the "3." at the front cannot push the last digit of an
+  // otherwise exact page over onto a page of its own
+  const int screen_digits = ((console_rows - reserved_rows) * console_cols) - ellipsis_room;
+
+  // Hold pages to a round thousand wherever the screen allows it, so that the page
+  // number says which digits are on it: page three starts at digit 2001 whatever the
+  // TV mode. Letting the screen decide instead would split ten thousand digits into
+  // nine pages on NTSC and eight on PAL, with no page starting on a round number
+  const int digits_per_page = screen_digits < 1000 ? screen_digits : 1000;
+
+  int total_pages = (precision + digits_per_page - 1) / digits_per_page;
   if (total_pages == 0) { total_pages = 1; }
   int current_page = 0;
   bool needs_redraw = true;
@@ -658,8 +669,18 @@ void calculate_and_display_pi(int method, int precision)
       cout << endl << "--- Full Result ---" << endl;
 
       // Prepare the content for the current page
-      int start_pos = current_page * page_size;
-      string page_content_raw = pi_full_string.substr(start_pos, page_size);
+      // A digit sits two characters further along than its own position, since "3."
+      // comes first. The opening page takes that prefix with it rather than counting
+      // it against its own digit budget
+      int start_pos = (current_page * digits_per_page) + 2;
+      int page_length = digits_per_page;
+      if (current_page == 0)
+      {
+        start_pos = 0;
+        page_length = digits_per_page + 2;
+      }
+
+      string page_content_raw = pi_full_string.substr(start_pos, page_length);
       string page_content_full = page_content_raw;
       int mismatch_index = accuracy_info.get_mismatch_index();
       int page_mismatch_pos = mismatch_index - start_pos;
