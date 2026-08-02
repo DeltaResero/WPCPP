@@ -448,35 +448,47 @@ void calculate_and_display_pi(int method, int precision)
   // Start the timer to measure calculation duration
   gettimeofday(&start_time, nullptr);
 
+  // Short name for the results screen, where the line it sits on has to leave room
+  // for two digit counts as well. The longest of these is 21 characters, which is
+  // what the width budget in compare_pi_accuracy is worked out from
+  string method_name;
+
   // Determine the calculation method based on user selection and calculate Pi
   switch (method)
   {
     case 0:
       cout << "Calculating Pi using Numerical Integration Method..." << endl;
+      method_name = "Numerical Integration";
       pi = calculate_pi_numerical_integration();
       break;
     case 1:
       cout << "Calculating Pi using Machin's Formula Method..." << endl;
+      method_name = "Machin's Formula";
       pi = calculate_pi_machin(precision);
       break;
     case 2:
       cout << "Calculating Pi using Ramanujan's First Series..." << endl;
+      method_name = "Ramanujan's Series";
       pi = calculate_pi_ramanujan(precision);
       break;
     case 3:
       cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
+      method_name = "Chudnovsky";
       pi = calculate_pi_chudnovsky(precision);
       break;
     case 4:
       cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
+      method_name = "Gauss-Legendre";
       pi = calculate_pi_gauss_legendre(precision);
       break;
     case 5:
       cout << "Calculating Pi using Spigot Algorithm..." << endl;
+      method_name = "Spigot";
       pi = calculate_pi_spigot(precision);
       break;
     case 6:
       cout << "Calculating Pi using Bailey-Borwein-Plouffe (BBP) formula..." << endl;
+      method_name = "BBP";
       pi = calculate_pi_bbp(precision);
       break;
     default:
@@ -508,7 +520,7 @@ void calculate_and_display_pi(int method, int precision)
   // a right answer from a wrong one without any digits of Pi being kept in the
   // program to compare against
   cout << "\nVerifying against BBP..." << endl;
-  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision);
+  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision, method_name);
   cout << accuracy_info.get_summary() << endl;
 
   // The BBP method above and the check just run are the same formula worked two
@@ -566,13 +578,14 @@ void calculate_and_display_pi(int method, int precision)
 
   // --- New Pagination and Display Loop ---
   // Rows a page of digits cannot use: up to three lines of accuracy report, the blank
-  // line and separator above the digits, the blank line and page counter below them,
-  // the scroll hint, the closing prompt, and one row of slack so that the closing
-  // newline does not scroll the report off the top of the screen. This counts each of
-  // those as a single row, which holds only while none of them wrap. The longest is
-  // the closing prompt at 54 characters and the report caps itself at 60, so a console
-  // narrower than 60 columns would need more rows reserved than this
-  const int reserved_rows = 10;
+  // line and separator above the digits, the closing rule and blank line below them,
+  // the page counter, the scroll hint, the closing prompt, and one row of slack so
+  // that the closing newline does not scroll the report off the top of the screen.
+  // This counts each of those as a single row, which holds only while none of them
+  // wrap. The widest are the closing prompt at 54 characters and the verdict line at
+  // 62 once both digit counts reach eight figures, so a console narrower than 62
+  // columns would need more rows reserved than this
+  const int reserved_rows = 11;
 
   // A page that carries on to either side shows an ellipsis there, which needs room
   const int ellipsis_room = 6;
@@ -696,10 +709,16 @@ void calculate_and_display_pi(int method, int precision)
         }
       }
 
+      // Close the digits off with a rule as wide as the header above them, then a
+      // blank line, so the result does not run straight into the controls. Plain
+      // dashes rather than an "end of result" marker, since on any page but the
+      // last one the result carries on
+      cout << "-------------------" << endl << endl;
+
       // Print the Footer
       if (total_pages > 1)
       {
-        cout << "\nPage " << (current_page + 1) << " of " << total_pages << endl;
+        cout << "Page " << (current_page + 1) << " of " << total_pages << endl;
         cout << "Use D-Pad Left/Right to scroll." << endl;
       }
 

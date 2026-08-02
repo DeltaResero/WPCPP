@@ -144,17 +144,28 @@ void format_pi(const mpf_class &pi_value, char *pi_str, int precision)
  * generates a detailed report.
  * @param calculated_pi The Pi value calculated by the program
  * @param precision The number of decimal places to check
+ * @param method_name The method that produced the value, named on the verdict line
  * @return An AccuracyReport object containing formatted strings and the mismatch index.
  */
-AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision)
+AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision,
+                                   const string &method_name)
 {
   AccuracyReport result;
   // result.mismatch_index is initialized to -1 by the constructor
 
+  // The verdict line carries the method name so the results screen says which one
+  // produced the digits below it. Worst case is the longest name at 21 characters
+  // followed by two counts, and room is left for those counts to reach eight
+  // figures: "Numerical Integration: 99999999 of 99999999 digit(s) confirmed" is
+  // 62 characters, which leaves 13 spare on the narrowest console at 75 columns.
+  // Keep any new wording inside that budget, since a line that wraps costs a row
+  // the pagination below has not reserved
+  const string verdict_label = method_name + ": ";
+
   if (calculated_pi <= 0)
   {
     result.set_summary("Not checked: the result is not a positive number.");
-    result.add_line("Invalid input: Pi cannot be less than or equal to zero.");
+    result.add_line(verdict_label + "not checked, the value is not above zero");
     return result;
   }
 
@@ -174,7 +185,7 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
   if (!bbp_self_test())
   {
     result.set_summary("Not checked: the checker failed its own self test.");
-    result.add_line("Verification unavailable: BBP self test failed.");
+    result.add_line(verdict_label + "not checked, BBP failed its own self test");
     return result;
   }
 
@@ -210,7 +221,7 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
     result.set_summary("Not confirmed: the result is not Pi.");
     result.set_mismatch_index(0);
     result.add_line(calculated_pi_label + calculated_str.substr(0, available_width));
-    result.add_line("Not confirmed: wrong before the decimal point");
+    result.add_line(verdict_label + "not confirmed before the decimal point");
     return result;
   }
 
@@ -256,7 +267,7 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
 
     result.set_summary("Verified: all " + to_string(precision) + " digit(s) confirmed.");
     result.add_line(calculated_pi_label + calc_display);
-    result.add_line("All " + to_string(precision) + " digit(s) after the decimal are confirmed.");
+    result.add_line(verdict_label + "all " + to_string(precision) + " digit(s) confirmed");
     return result;
   }
 
@@ -305,8 +316,8 @@ AccuracyReport compare_pi_accuracy(const mpf_class &calculated_pi, int precision
 
   result.add_line(calculated_pi_label + calc_display);
   result.add_line(arrow_line);
-  result.add_line("Confirmed " + to_string(confirmed_decimals) + " of "
-    + to_string(precision) + " digit(s) after the decimal");
+  result.add_line(verdict_label + to_string(confirmed_decimals) + " of "
+    + to_string(precision) + " digit(s) confirmed");
 
   return result;
 }
