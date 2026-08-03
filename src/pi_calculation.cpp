@@ -565,25 +565,15 @@ mpf_class calculate_pi_bbp(int precision)
 }
 
 /**
- * Times the Pi calculation and displays a detailed, paginated report.
- * @param method The method to use for Pi calculation.
- * @param precision The number of decimal places for the Pi calculation.
+ * Announces the chosen method and runs it
+ * @param method The method to use for Pi calculation
+ * @param precision The number of decimal places for the Pi calculation
+ * @param pi Filled in with the calculated value
+ * @return The short name for the results screen, or an empty string if the
+ *         method number does not name anything
  */
-void calculate_and_display_pi(int method, int precision)
+static string run_selected_method(int method, int precision, mpf_class &pi)
 {
-  // Clear the screen before displaying the results
-  cout << "\x1b[2J";  // ANSI escape code to clear the screen
-
-  // Display the selected precision level
-  cout << "Precision level set to: " << precision << " decimal place(s)" << endl;
-
-  struct timeval start_time;
-  struct timeval end_time;  // To measure elapsed time
-  mpf_class pi;  // Variable to hold the calculated value of Pi
-
-  // Start the timer to measure calculation duration
-  gettimeofday(&start_time, nullptr);
-
   // Short name for the results screen, where the line it sits on has to leave room
   // for two digit counts as well. The longest of these is 21 characters, which is
   // what the width budget in compare_pi_accuracy is worked out from
@@ -634,88 +624,61 @@ void calculate_and_display_pi(int method, int precision)
       break;
     default:
       cout << "Invalid method selection." << endl;
-      return;
+      break;
     }
 
-  // Stop the timer now that calculation is complete
-  gettimeofday(&end_time, nullptr);
+  return method_name;
+}
 
-  // Calculate the elapsed time in milliseconds
-  double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 + (end_time.tv_usec - start_time.tv_usec) / 1000.0;
-
-  // Indicate that the Pi calculation has completed
-  cout << "\nPi Calculation Complete!" << endl;
-
-  // Handle unrealistic time values (negative or zero), which may occur in emulation
-  if (time_taken <= 0)
-  {
-    cout << "Time taken: unknown (possibly due to emulation)" << endl;
-  }
-  else
-  {
-    cout << "Time taken: " << format_duration(time_taken) << endl;
-  }
-
-  // Check the answer before it is shown. The check works the digits out a second
-  // time by a route with nothing in common with the method above, so it can tell
-  // a right answer from a wrong one without any digits of Pi being kept in the
-  // program to compare against
-  cout << "\nVerifying against BBP..." << endl;
-  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision, method_name);
-  cout << accuracy_info.get_summary() << endl;
-
-  // The BBP method above and the check just run are the same formula worked two
+/**
+ * Works Pi out a second time by an unrelated route and compares, for the one
+ * method the usual check cannot vouch for on its own
+ * @param pi The value to check
+ * @param precision The number of decimal places that were asked for
+ */
+static void cross_check_against_gauss_legendre(const mpf_class &pi, int precision)
+{
+  // The BBP method and the check that follows it are the same formula worked two
   // different ways. Agreement between them shows the arithmetic was carried out
   // properly, but it could not catch the formula itself being written down
   // wrongly, since the same mistake would sit on both sides. For that one method
   // only, work Pi out again by a route with no formula in common and compare.
   // Gauss-Legendre is hundreds of times quicker than the method it is checking
   // here, so this costs almost nothing
-  if (method == 6)
+  mpf_class independent = calculate_pi_gauss_legendre(precision);
+  mpf_class difference = pi - independent;
+
+  if (difference < 0)
   {
-    mpf_class independent = calculate_pi_gauss_legendre(precision);
-    mpf_class difference = pi - independent;
-
-    if (difference < 0)
-    {
-      difference = -difference;
-    }
-
-    if (difference < mpf_class("1e-" + to_string(precision)))
-    {
-      cout << "Cross-check against Gauss-Legendre: PASS" << endl;
-    }
-    else
-    {
-      cout << "Cross-check against Gauss-Legendre: FAIL" << endl;
-    }
+    difference = -difference;
   }
 
-  // Numerical integration works to a fixed step size rather than to the number
-  // of places asked for, so it runs out of accuracy around fifteen decimal
-  // places however many are requested. Hitting that wall is the method working
-  // as designed, so say so rather than leave it reading like a fault
-  if (method == 0 && accuracy_info.get_mismatch_index() != -1)
+  if (difference < mpf_class("1e-" + to_string(precision)))
   {
-    cout << "This method is limited to about 15 decimal place(s) by design." << endl;
+    cout << "Cross-check against Gauss-Legendre: PASS" << endl;
   }
-
-  // Wait for user to press a button before showing the detailed results
-  cout << "\nPress any button to view results..." << endl;
-  while (true)
+  else
   {
-    poll_inputs();
-    if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
-    {
-      break;
-    }
-    VIDEO_WaitVSync();
+    cout << "Cross-check against Gauss-Legendre: FAIL" << endl;
   }
+}
 
-  // Get the full string representation of Pi for pagination
-  const string pi_full_string = format_pi(pi, precision);
+// Drawing one page is a job of its own, defined below the loop that drives it
+static void draw_result_page(const string &pi_full_string,
+                             const AccuracyReport &accuracy_info,
+                             int current_page, int total_pages,
+                             int digits_per_page);
 
-  // --- New Pagination and Display Loop ---
+/**
+ * Shows the digits a screenful at a time, letting the user page through them
+ * @param pi_full_string The full result, "3." and every digit asked for
+ * @param precision The number of decimal places the result carries
+ * @param accuracy_info The report shown above the digits, which also says where
+ *        the first wrong digit is so the rest can be coloured
+ */
+static void display_pi_pages(const string &pi_full_string, int precision,
+                             const AccuracyReport &accuracy_info)
+{
   // Rows a page of digits cannot use: up to three lines of accuracy report, the blank
   // line and separator above the digits, the closing rule and blank line below them,
   // the page counter, the scroll hint, the closing prompt, and one row of slack so
@@ -798,98 +761,200 @@ void calculate_and_display_pi(int method, int precision)
 
     if (needs_redraw)
     {
-      cout << "\x1b[2J";
-
-      // Print the Accuracy Report Header
-      for (const auto& line : accuracy_info.get_lines())
-      {
-        cout << line << endl;
-      }
-
-      // Print a separator
-      cout << endl << "--- Full Result ---" << endl;
-
-      // Prepare the content for the current page
-      // A digit sits two characters further along than its own position, since "3."
-      // comes first. The opening page takes that prefix with it rather than counting
-      // it against its own digit budget
-      int start_pos = (current_page * digits_per_page) + 2;
-      int page_length = digits_per_page;
-      if (current_page == 0)
-      {
-        start_pos = 0;
-        page_length = digits_per_page + 2;
-      }
-
-      string page_content_raw = pi_full_string.substr(start_pos, page_length);
-      string page_content_full = page_content_raw;
-      int mismatch_index = accuracy_info.get_mismatch_index();
-      int page_mismatch_pos = mismatch_index - start_pos;
-
-      // Add ellipses for continuation if there are multiple pages
-      if (total_pages > 1)
-      {
-        if (current_page > 0)
-        {
-          page_content_full.insert(0, "...");
-          if (mismatch_index != -1) { page_mismatch_pos += 3; }
-        }
-        if (current_page < total_pages - 1)
-        {
-          page_content_full += "...";
-        }
-      }
-
-      const string red = "\x1b[31m";
-      const string reset_color = "\x1b[37m";
-
-      // Print the paginated body with color coding
-      if (mismatch_index == -1)
-      {
-        cout << page_content_full << endl;
-      }
-      else
-      {
-        // Mismatch occurred before the start of this page's raw content
-        if (mismatch_index < start_pos)
-        {
-          cout << red << page_content_full << reset_color << endl;
-        }
-        // Mismatch occurs after this page's raw content
-        else if (mismatch_index >= start_pos + (int)page_content_raw.length())
-        {
-          cout << page_content_full << endl;
-        }
-        // Mismatch is on this page
-        else
-        {
-          string correct_part = page_content_full.substr(0, page_mismatch_pos);
-          string incorrect_part = page_content_full.substr(page_mismatch_pos);
-          cout << correct_part << red << incorrect_part << reset_color << endl;
-        }
-      }
-
-      // Close the digits off with a rule as wide as the header above them, then a
-      // blank line, so the result does not run straight into the controls. Plain
-      // dashes rather than an "end of result" marker, since on any page but the
-      // last one the result carries on
-      cout << "-------------------" << endl << endl;
-
-      // Print the Footer
-      if (total_pages > 1)
-      {
-        cout << "Page " << (current_page + 1) << " of " << total_pages << endl;
-        cout << "Use D-Pad Left/Right to scroll." << endl;
-      }
-
-      cout << "Press A/B to return to menu. Press Home/Start to exit." << endl;
-
+      draw_result_page(pi_full_string, accuracy_info, current_page, total_pages,
+                       digits_per_page);
       needs_redraw = false;
     }
 
     // Wait for video sync to ensure smooth input handling
     VIDEO_WaitVSync();
   }
+}
+
+/**
+ * Draws one page of digits, with the accuracy report above and the controls
+ * below. Everything on screen is rewritten, so the caller only calls this when
+ * something has actually changed
+ * @param pi_full_string The full result, "3." and every digit asked for
+ * @param accuracy_info The report to print above the digits
+ * @param current_page The page to draw, counted from zero
+ * @param total_pages How many pages the result comes to
+ * @param digits_per_page How many digits a page holds
+ */
+static void draw_result_page(const string &pi_full_string,
+                             const AccuracyReport &accuracy_info,
+                             int current_page, int total_pages,
+                             int digits_per_page)
+{
+  cout << "\x1b[2J";
+
+  // Print the Accuracy Report Header
+  for (const auto& line : accuracy_info.get_lines())
+  {
+    cout << line << endl;
+  }
+
+  // Print a separator
+  cout << endl << "--- Full Result ---" << endl;
+
+  // Prepare the content for the current page
+  // A digit sits two characters further along than its own position, since "3."
+  // comes first. The opening page takes that prefix with it rather than counting
+  // it against its own digit budget
+  int start_pos = (current_page * digits_per_page) + 2;
+  int page_length = digits_per_page;
+  if (current_page == 0)
+  {
+    start_pos = 0;
+    page_length = digits_per_page + 2;
+  }
+
+  string page_content_raw = pi_full_string.substr(start_pos, page_length);
+  string page_content_full = page_content_raw;
+  int mismatch_index = accuracy_info.get_mismatch_index();
+  int page_mismatch_pos = mismatch_index - start_pos;
+
+  // Add ellipses for continuation if there are multiple pages
+  if (total_pages > 1)
+  {
+    if (current_page > 0)
+    {
+      page_content_full.insert(0, "...");
+      if (mismatch_index != -1) { page_mismatch_pos += 3; }
+    }
+    if (current_page < total_pages - 1)
+    {
+      page_content_full += "...";
+    }
+  }
+
+  const string red = "\x1b[31m";
+  const string reset_color = "\x1b[37m";
+
+  // Print the paginated body with color coding
+  if (mismatch_index == -1)
+  {
+    cout << page_content_full << endl;
+  }
+  else
+  {
+    // Mismatch occurred before the start of this page's raw content
+    if (mismatch_index < start_pos)
+    {
+      cout << red << page_content_full << reset_color << endl;
+    }
+    // Mismatch occurs after this page's raw content
+    else if (mismatch_index >= start_pos + (int)page_content_raw.length())
+    {
+      cout << page_content_full << endl;
+    }
+    // Mismatch is on this page
+    else
+    {
+      string correct_part = page_content_full.substr(0, page_mismatch_pos);
+      string incorrect_part = page_content_full.substr(page_mismatch_pos);
+      cout << correct_part << red << incorrect_part << reset_color << endl;
+    }
+  }
+
+  // Close the digits off with a rule as wide as the header above them, then a
+  // blank line, so the result does not run straight into the controls. Plain
+  // dashes rather than an "end of result" marker, since on any page but the
+  // last one the result carries on
+  cout << "-------------------" << endl << endl;
+
+  // Print the Footer
+  if (total_pages > 1)
+  {
+    cout << "Page " << (current_page + 1) << " of " << total_pages << endl;
+    cout << "Use D-Pad Left/Right to scroll." << endl;
+  }
+
+  cout << "Press A/B to return to menu. Press Home/Start to exit." << endl;
+}
+
+/**
+ * Times the Pi calculation and displays a detailed, paginated report.
+ * @param method The method to use for Pi calculation.
+ * @param precision The number of decimal places for the Pi calculation.
+ */
+void calculate_and_display_pi(int method, int precision)
+{
+  // Clear the screen before displaying the results
+  cout << "\x1b[2J";  // ANSI escape code to clear the screen
+
+  // Display the selected precision level
+  cout << "Precision level set to: " << precision << " decimal place(s)" << endl;
+
+  struct timeval start_time;
+  struct timeval end_time;  // To measure elapsed time
+  mpf_class pi;  // Variable to hold the calculated value of Pi
+
+  // Start the timer to measure calculation duration
+  gettimeofday(&start_time, nullptr);
+
+  const string method_name = run_selected_method(method, precision, pi);
+  if (method_name.empty())
+  {
+    return;  // Nothing was calculated, so there is nothing to report
+  }
+
+  // Stop the timer now that calculation is complete
+  gettimeofday(&end_time, nullptr);
+
+  // Calculate the elapsed time in milliseconds
+  double time_taken = (end_time.tv_sec - start_time.tv_sec) * 1000.0 + (end_time.tv_usec - start_time.tv_usec) / 1000.0;
+
+  // Indicate that the Pi calculation has completed
+  cout << "\nPi Calculation Complete!" << endl;
+
+  // Handle unrealistic time values (negative or zero), which may occur in emulation
+  if (time_taken <= 0)
+  {
+    cout << "Time taken: unknown (possibly due to emulation)" << endl;
+  }
+  else
+  {
+    cout << "Time taken: " << format_duration(time_taken) << endl;
+  }
+
+  // Check the answer before it is shown. The check works the digits out a second
+  // time by a route with nothing in common with the method above, so it can tell
+  // a right answer from a wrong one without any digits of Pi being kept in the
+  // program to compare against
+  cout << "\nVerifying against BBP..." << endl;
+  AccuracyReport accuracy_info = compare_pi_accuracy(pi, precision, method_name);
+  cout << accuracy_info.get_summary() << endl;
+
+  // The BBP method checks itself against its own formula, so it gets a second
+  // opinion from a method with nothing in common with it
+  if (method == 6)
+  {
+    cross_check_against_gauss_legendre(pi, precision);
+  }
+
+  // Numerical integration works to a fixed step size rather than to the number
+  // of places asked for, so it runs out of accuracy around fifteen decimal
+  // places however many are requested. Hitting that wall is the method working
+  // as designed, so say so rather than leave it reading like a fault
+  if (method == 0 && accuracy_info.get_mismatch_index() != -1)
+  {
+    cout << "This method is limited to about 15 decimal place(s) by design." << endl;
+  }
+
+  // Wait for user to press a button before showing the detailed results
+  cout << "\nPress any button to view results..." << endl;
+  while (true)
+  {
+    poll_inputs();
+    if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
+    {
+      break;
+    }
+    VIDEO_WaitVSync();
+  }
+
+  display_pi_pages(format_pi(pi, precision), precision, accuracy_info);
 }
 
 // EOF
