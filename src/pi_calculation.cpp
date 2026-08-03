@@ -565,6 +565,39 @@ mpf_class calculate_pi_bbp(int precision)
 }
 
 /**
+ * Runs numerical integration through the same signature as the others, which
+ * work to a precision it has no use for
+ * @return The calculated value of Pi
+ */
+static mpf_class numerical_integration_ignoring_precision(int)
+{
+  return calculate_pi_numerical_integration();
+}
+
+// Every method in menu order, so a new one is added here rather than in a switch.
+// The announcement goes on screen while the work runs. The short name goes on the
+// results screen, where the line it sits on has to leave room for two digit counts
+// as well, and the longest of these is 21 characters, which is what the width
+// budget in compare_pi_accuracy is worked out from
+static const struct
+{
+  const char *announcement;
+  const char *short_name;
+  mpf_class (*calculate)(int precision);
+}
+methods[] =
+{
+  { "Numerical Integration Method",         "Numerical Integration", numerical_integration_ignoring_precision },
+  { "Machin's Formula Method",              "Machin's Formula",      calculate_pi_machin },
+  { "Ramanujan's First Series",             "Ramanujan's Series",    calculate_pi_ramanujan },
+  { "Chudnovsky's Algorithm",               "Chudnovsky",            calculate_pi_chudnovsky },
+  { "Gauss-Legendre Algorithm",             "Gauss-Legendre",        calculate_pi_gauss_legendre },
+  { "Spigot Algorithm",                     "Spigot",                calculate_pi_spigot },
+  { "Bailey-Borwein-Plouffe (BBP) formula", "BBP",                   calculate_pi_bbp },
+  { "Borwein's Quartic Algorithm",          "Borwein Quartic",       calculate_pi_borwein_quartic }
+};
+
+/**
  * Announces the chosen method and runs it
  * @param method The method to use for Pi calculation
  * @param precision The number of decimal places for the Pi calculation
@@ -574,60 +607,18 @@ mpf_class calculate_pi_bbp(int precision)
  */
 static string run_selected_method(int method, int precision, mpf_class &pi)
 {
-  // Short name for the results screen, where the line it sits on has to leave room
-  // for two digit counts as well. The longest of these is 21 characters, which is
-  // what the width budget in compare_pi_accuracy is worked out from
-  string method_name;
+  const int method_count = static_cast<int>(sizeof(methods) / sizeof(methods[0]));
 
-  // Determine the calculation method based on user selection and calculate Pi
-  switch (method)
+  if (method < 0 || method >= method_count)
   {
-    case 0:
-      cout << "Calculating Pi using Numerical Integration Method..." << endl;
-      method_name = "Numerical Integration";
-      pi = calculate_pi_numerical_integration();
-      break;
-    case 1:
-      cout << "Calculating Pi using Machin's Formula Method..." << endl;
-      method_name = "Machin's Formula";
-      pi = calculate_pi_machin(precision);
-      break;
-    case 2:
-      cout << "Calculating Pi using Ramanujan's First Series..." << endl;
-      method_name = "Ramanujan's Series";
-      pi = calculate_pi_ramanujan(precision);
-      break;
-    case 3:
-      cout << "Calculating Pi using Chudnovsky's Algorithm..." << endl;
-      method_name = "Chudnovsky";
-      pi = calculate_pi_chudnovsky(precision);
-      break;
-    case 4:
-      cout << "Calculating Pi using Gauss-Legendre Algorithm..." << endl;
-      method_name = "Gauss-Legendre";
-      pi = calculate_pi_gauss_legendre(precision);
-      break;
-    case 5:
-      cout << "Calculating Pi using Spigot Algorithm..." << endl;
-      method_name = "Spigot";
-      pi = calculate_pi_spigot(precision);
-      break;
-    case 6:
-      cout << "Calculating Pi using Bailey-Borwein-Plouffe (BBP) formula..." << endl;
-      method_name = "BBP";
-      pi = calculate_pi_bbp(precision);
-      break;
-    case 7:
-      cout << "Calculating Pi using Borwein's Quartic Algorithm..." << endl;
-      method_name = "Borwein Quartic";
-      pi = calculate_pi_borwein_quartic(precision);
-      break;
-    default:
-      cout << "Invalid method selection." << endl;
-      break;
-    }
+    cout << "Invalid method selection." << endl;
+    return "";
+  }
 
-  return method_name;
+  cout << "Calculating Pi using " << methods[method].announcement << "..." << endl;
+  pi = methods[method].calculate(precision);
+
+  return methods[method].short_name;
 }
 
 /**
