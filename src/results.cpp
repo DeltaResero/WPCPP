@@ -78,6 +78,38 @@ static int digits_that_fit_one_page()
 }
 
 /**
+ * Moves to the page either side of this one if the D-pad was just pressed that
+ * way. A press towards an edge that has no page beyond it does nothing
+ * @param current_page The page being shown, kept inside the pages there are
+ * @param total_pages How many pages the result comes to
+ * @return True when the page changed, so the caller knows to draw it again
+ */
+static bool turn_page_if_asked(int &current_page, int total_pages)
+{
+  bool changed = false;
+
+  if (is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT))
+  {
+    if (current_page < total_pages - 1)
+    {
+      current_page++;
+      changed = true;
+    }
+  }
+
+  if (is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT))
+  {
+    if (current_page > 0)
+    {
+      current_page--;
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+/**
  * Shows the digits a screenful at a time, letting the user page through them
  * @param pi_full_string The full result, "3." and every digit asked for
  * @param precision The number of decimal places the result carries
@@ -104,21 +136,9 @@ bool display_pi_pages(const string &pi_full_string, int precision,
     poll_inputs();
 
     // Turn the page
-    if (is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT))
+    if (turn_page_if_asked(current_page, total_pages))
     {
-      if (current_page < total_pages - 1)
-      {
-        current_page++;
-        needs_redraw = true;
-      }
-    }
-    if (is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT))
-    {
-      if (current_page > 0)
-      {
-        current_page--;
-        needs_redraw = true;
-      }
+      needs_redraw = true;
     }
 
     // Leave the program, matching what the menus do with these same buttons

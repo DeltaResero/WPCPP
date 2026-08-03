@@ -682,6 +682,26 @@ static void cross_check_against_gauss_legendre(const mpf_class &pi, int precisio
 }
 
 /**
+ * Waits for any button at all, so that what is already on screen can be read
+ * before the next thing takes it over. Every button counts here rather than a
+ * chosen one, since there is nothing to choose between at this point
+ */
+static void wait_for_any_button()
+{
+  while (true)
+  {
+    poll_inputs();
+
+    if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
+    {
+      return;
+    }
+
+    VIDEO_WaitVSync();
+  }
+}
+
+/**
  * Times the Pi calculation and displays a detailed, paginated report.
  * @param method The method to use for Pi calculation.
  * @param precision The number of decimal places for the Pi calculation.
@@ -762,15 +782,7 @@ bool calculate_and_display_pi(int method, int precision)
 
   // Wait for user to press a button before showing the detailed results
   cout << "\nPress any button to view results..." << endl;
-  while (true)
-  {
-    poll_inputs();
-    if (is_button_just_pressed(0xFFFFFFFF, 0xFFFFFFFF))
-    {
-      break;
-    }
-    VIDEO_WaitVSync();
-  }
+  wait_for_any_button();
 
   return display_pi_pages(format_pi(pi, precision), precision, accuracy_info);
 }
