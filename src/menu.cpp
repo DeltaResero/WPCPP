@@ -95,7 +95,8 @@ int method_selection_menu()
 /**
  * Displays a precision selection screen to allow the user to choose the number
  * of decimal places for the Pi calculation
- * @return The selected precision (between 1 and MAX_PI_DIGITS decimal places)
+ * @return The selected precision, between 1 and MAX_PI_DIGITS decimal places,
+ *         or zero if the user went back to the method selection instead
  */
 int precision_selection_menu()
 {
@@ -114,6 +115,7 @@ int precision_selection_menu()
   cout << "Use Left/Right on the D-pad to adjust.\n";
   cout << "Press 'L'/'R' or '-'/'+' to change the stepping size.\n";
   cout << "Press 'A' to confirm.\n";
+  cout << "Press 'B' to go back to the method selection.\n";
   cout << "Press 'Home' on Wii Remote or 'Start' on GameCube controller to exit.\n";
 
   // Loop until the user confirms their precision selection
@@ -130,6 +132,7 @@ int precision_selection_menu()
     bool button_l_down = is_button_just_pressed(PAD_TRIGGER_L, WPAD_BUTTON_MINUS);
     bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
+    bool button_b_down = is_button_just_pressed(PAD_BUTTON_B, WPAD_BUTTON_B);
 
     // Cycle the step size down one power of ten
     if (button_l_down)
@@ -179,6 +182,13 @@ int precision_selection_menu()
     if (button_a_down)
     {
       return precision;  // Return the selected precision
+    }
+
+    // Go back a screen. Zero is not a precision anyone can ask for, so it says
+    // the user left without choosing one without needing a second return value
+    if (button_b_down)
+    {
+      return 0;
     }
 
     // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit

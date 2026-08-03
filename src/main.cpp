@@ -43,6 +43,13 @@ int main()
     int method = method_selection_menu();
     int precision = precision_selection_menu();
 
+    // The precision screen hands back nothing when the user backs out of it, which
+    // sends them round to the method they came from rather than into a calculation
+    if (precision < 1)
+    {
+      continue;
+    }
+
     // Dynamically set GMP precision (number of bits) based on user input of how many digits of pi they want to calculate
     // 3.32193 bits per decimal place is an approximation of log2(10)
     mpf_set_default_prec(static_cast<mp_bitcnt_t>(precision * 3.32193) + guard_bits);
