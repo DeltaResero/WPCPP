@@ -797,6 +797,73 @@ static void display_pi_pages(const string &pi_full_string, int precision,
 }
 
 /**
+ * Prints the digits belonging to one page, wrong ones in red
+ * @param pi_full_string The full result, "3." and every digit asked for
+ * @param accuracy_info The report, which says where the first wrong digit is
+ * @param current_page The page to print, counted from zero
+ * @param total_pages How many pages the result comes to
+ * @param digits_per_page How many digits a page holds
+ */
+static void print_page_digits(const string &pi_full_string,
+                              const AccuracyReport &accuracy_info,
+                              int current_page, int total_pages,
+                              int digits_per_page)
+{
+  // A digit sits two characters further along than its own position, since "3."
+  // comes first. The opening page takes that prefix with it rather than counting
+  // it against its own digit budget
+  int start_pos = (current_page * digits_per_page) + 2;
+  int page_length = digits_per_page;
+  if (current_page == 0)
+  {
+    start_pos = 0;
+    page_length = digits_per_page + 2;
+  }
+
+  const string page_digits = pi_full_string.substr(start_pos, page_length);
+  const int mismatch_index = accuracy_info.get_mismatch_index();
+  string page_text = page_digits;
+  int mismatch_on_page = mismatch_index - start_pos;
+
+  // Mark a page that carries on to either side. An ellipsis going in front of the
+  // digits pushes every one of them along, the mismatch included
+  if (total_pages > 1)
+  {
+    if (current_page > 0)
+    {
+      page_text.insert(0, "...");
+      mismatch_on_page += 3;
+    }
+    if (current_page < total_pages - 1)
+    {
+      page_text += "...";
+    }
+  }
+
+  // Where the red starts. A mismatch that falls ahead of this page leaves every
+  // digit on it wrong, and one past the end of the page leaves them all right
+  int red_from = -1;
+  if (mismatch_index >= 0
+      && mismatch_index < start_pos + static_cast<int>(page_digits.length()))
+  {
+    red_from = mismatch_index < start_pos ? 0 : mismatch_on_page;
+  }
+
+  const string red = "\x1b[31m";
+  const string reset_color = "\x1b[37m";
+
+  if (red_from < 0)
+  {
+    cout << page_text << endl;
+  }
+  else
+  {
+    cout << page_text.substr(0, red_from) << red << page_text.substr(red_from)
+         << reset_color << endl;
+  }
+}
+
+/**
  * Draws one page of digits, with the accuracy report above and the controls
  * below. Everything on screen is rewritten, so the caller only calls this when
  * something has actually changed
@@ -822,65 +889,8 @@ static void draw_result_page(const string &pi_full_string,
   // Print a separator
   cout << endl << "--- Full Result ---" << endl;
 
-  // Prepare the content for the current page
-  // A digit sits two characters further along than its own position, since "3."
-  // comes first. The opening page takes that prefix with it rather than counting
-  // it against its own digit budget
-  int start_pos = (current_page * digits_per_page) + 2;
-  int page_length = digits_per_page;
-  if (current_page == 0)
-  {
-    start_pos = 0;
-    page_length = digits_per_page + 2;
-  }
-
-  string page_content_raw = pi_full_string.substr(start_pos, page_length);
-  string page_content_full = page_content_raw;
-  int mismatch_index = accuracy_info.get_mismatch_index();
-  int page_mismatch_pos = mismatch_index - start_pos;
-
-  // Add ellipses for continuation if there are multiple pages
-  if (total_pages > 1)
-  {
-    if (current_page > 0)
-    {
-      page_content_full.insert(0, "...");
-      if (mismatch_index != -1) { page_mismatch_pos += 3; }
-    }
-    if (current_page < total_pages - 1)
-    {
-      page_content_full += "...";
-    }
-  }
-
-  const string red = "\x1b[31m";
-  const string reset_color = "\x1b[37m";
-
-  // Print the paginated body with color coding
-  if (mismatch_index == -1)
-  {
-    cout << page_content_full << endl;
-  }
-  else
-  {
-    // Mismatch occurred before the start of this page's raw content
-    if (mismatch_index < start_pos)
-    {
-      cout << red << page_content_full << reset_color << endl;
-    }
-    // Mismatch occurs after this page's raw content
-    else if (mismatch_index >= start_pos + (int)page_content_raw.length())
-    {
-      cout << page_content_full << endl;
-    }
-    // Mismatch is on this page
-    else
-    {
-      string correct_part = page_content_full.substr(0, page_mismatch_pos);
-      string incorrect_part = page_content_full.substr(page_mismatch_pos);
-      cout << correct_part << red << incorrect_part << reset_color << endl;
-    }
-  }
+  print_page_digits(pi_full_string, accuracy_info, current_page, total_pages,
+                    digits_per_page);
 
   // Close the digits off with a rule as wide as the header above them, then a
   // blank line, so the result does not run straight into the controls. Plain
