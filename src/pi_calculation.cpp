@@ -698,7 +698,7 @@ static int digits_that_fit_one_page()
   // the page counter, the scroll hint, the closing prompt, and one row of slack so
   // that the closing newline does not scroll the report off the top of the screen.
   // This counts each of those as a single row, which holds only while none of them
-  // wrap. The widest are the closing prompt at 54 characters and the verdict line at
+  // wrap. The widest are the closing prompt at 59 characters and the verdict line at
   // 62 once both digit counts reach eight figures, so a console narrower than 62
   // columns would need more rows reserved than this
   const int reserved_rows = 11;
@@ -736,8 +736,9 @@ static int digits_that_fit_one_page()
  * @param precision The number of decimal places the result carries
  * @param accuracy_info The report shown above the digits, which also says where
  *        the first wrong digit is so the rest can be coloured
+ * @return True when the user went back a screen rather than on to the method list
  */
-static void display_pi_pages(const string &pi_full_string, int precision,
+static bool display_pi_pages(const string &pi_full_string, int precision,
                              const AccuracyReport &accuracy_info)
 {
   const int digits_per_page = digits_that_fit_one_page();
@@ -779,10 +780,16 @@ static void display_pi_pages(const string &pi_full_string, int precision,
       exit_WPCPP();
     }
 
-    // Go back to the menu
-    if (is_button_just_pressed(PAD_BUTTON_A | PAD_BUTTON_B, WPAD_BUTTON_A | WPAD_BUTTON_B))
+    // Done with this result altogether, so on to the method list
+    if (is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A))
     {
-      break;
+      return false;
+    }
+
+    // Back a screen, to the precision this result was worked out to
+    if (is_button_just_pressed(PAD_BUTTON_B, WPAD_BUTTON_B))
+    {
+      return true;
     }
 
     if (needs_redraw)
@@ -906,15 +913,16 @@ static void draw_result_page(const string &pi_full_string,
     cout << "Use D-Pad Left/Right to scroll." << endl;
   }
 
-  cout << "Press A/B to return to menu. Press Home/Start to exit." << endl;
+  cout << "Press 'A' for methods, 'B' for precision, Home/Start exits." << endl;
 }
 
 /**
  * Times the Pi calculation and displays a detailed, paginated report.
  * @param method The method to use for Pi calculation.
  * @param precision The number of decimal places for the Pi calculation.
- * @return True when the calculation was cancelled part way through, which
- *         leaves the method still chosen rather than needing picking again
+ * @return True when the user ended up going back a screen, either by cancelling
+ *         the calculation or by leaving the results with B. False when they are
+ *         finished with this method altogether
  */
 bool calculate_and_display_pi(int method, int precision)
 {
@@ -999,8 +1007,7 @@ bool calculate_and_display_pi(int method, int precision)
     VIDEO_WaitVSync();
   }
 
-  display_pi_pages(format_pi(pi, precision), precision, accuracy_info);
-  return false;
+  return display_pi_pages(format_pi(pi, precision), precision, accuracy_info);
 }
 
 // EOF

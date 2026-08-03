@@ -48,9 +48,9 @@ int main()
     // Prompt the user to select a method for calculating Pi
     method = method_selection_menu(method);
 
-    // Stay with that method for as long as calculations keep being cancelled.
-    // Someone who stops one has nearly always asked for more digits than they meant
-    // rather than picked the wrong method, so the precision screen is where to land
+    // Stay with that method for as long as B keeps being pressed. Someone who stops
+    // a calculation, or who has read a result and wants another, has nearly always
+    // asked the wrong number of digits rather than picked the wrong method
     while (true)
     {
       // Backing out of the precision screen is the way back to the method list. It
@@ -66,11 +66,11 @@ int main()
       mpf_set_default_prec(static_cast<mp_bitcnt_t>(precision * 3.32193) + guard_bits);
 
       // Calculate Pi using the selected method and precision, then display the result
-      const bool cancelled = calculate_and_display_pi(method, precision);
+      const bool went_back = calculate_and_display_pi(method, precision);
 
-      // A calculation that ran to the end has had its results read and closed, so
-      // the method list comes back around for the next one
-      if (!cancelled)
+      // Anything other than going back a screen is done with this method, so the
+      // method list comes around again
+      if (!went_back)
       {
         break;
       }
