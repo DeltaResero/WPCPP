@@ -11,6 +11,7 @@
 
 #include "menu.hpp"
 #include "utility.hpp"
+#include "pi_calculation.hpp"
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 #include <iostream>
@@ -26,19 +27,7 @@ using namespace std;  // Use the entire std namespace for simplicity
  */
 int method_selection_menu()
 {
-  // Array of Pi calculation methods
-  string pi_methods[] = {
-    "Numerical Integration",
-    "Machin's Formula",
-    "Ramanujan's First Series",
-    "Chudnovsky Algorithm",
-    "Gauss-Legendre Algorithm",
-    "Spigot Algorithm",
-    "Bailey-Borwein-Plouffe (BBP) Formula",
-    "Borwein's Quartic Algorithm"
-  };
-
-  int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);
+  const int num_methods = pi_method_count();
   int selected_index = 0;
 
   // Clear the screen and display instructions
@@ -84,7 +73,7 @@ int method_selection_menu()
 
     // Clear the previous line by overwriting it with spaces, then reprint the currently selected method
     cout << "\rCurrently Selected: " << string(max_length, ' ') << "\r";  // Clear previous line
-    cout << "Currently Selected: " << pi_methods[selected_index] << "\r"; // Print new selection
+    cout << "Currently Selected: " << pi_method_menu_name(selected_index) << "\r"; // Print new selection
 
     // Confirm selection when 'A' button is pressed
     if (button_a_down)

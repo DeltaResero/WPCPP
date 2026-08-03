@@ -574,28 +574,56 @@ static mpf_class numerical_integration_ignoring_precision(int)
   return calculate_pi_numerical_integration();
 }
 
-// Every method in menu order, so a new one is added here rather than in a switch.
-// The announcement goes on screen while the work runs. The short name goes on the
-// results screen, where the line it sits on has to leave room for two digit counts
-// as well, and the longest of these is 21 characters, which is what the width
-// budget in compare_pi_accuracy is worked out from
+// Every method, in menu order. The three names it goes by:
+//   menu_name     what the selection menu offers
+//   announcement  what goes on screen while the work runs
+//   short_name    what the results screen shows, on a line that also has to hold
+//                 two digit counts. The longest of these is 21 characters, which
+//                 is what the width budget in compare_pi_accuracy is worked from
+// They read close enough to look interchangeable but they are not, so leave the
+// wording of each alone unless the screen it belongs to is being changed
 static const struct
 {
+  const char *menu_name;
   const char *announcement;
   const char *short_name;
   mpf_class (*calculate)(int precision);
 }
 methods[] =
 {
-  { "Numerical Integration Method",         "Numerical Integration", numerical_integration_ignoring_precision },
-  { "Machin's Formula Method",              "Machin's Formula",      calculate_pi_machin },
-  { "Ramanujan's First Series",             "Ramanujan's Series",    calculate_pi_ramanujan },
-  { "Chudnovsky's Algorithm",               "Chudnovsky",            calculate_pi_chudnovsky },
-  { "Gauss-Legendre Algorithm",             "Gauss-Legendre",        calculate_pi_gauss_legendre },
-  { "Spigot Algorithm",                     "Spigot",                calculate_pi_spigot },
-  { "Bailey-Borwein-Plouffe (BBP) formula", "BBP",                   calculate_pi_bbp },
-  { "Borwein's Quartic Algorithm",          "Borwein Quartic",       calculate_pi_borwein_quartic }
+  { "Numerical Integration",                "Numerical Integration Method",         "Numerical Integration", numerical_integration_ignoring_precision },
+  { "Machin's Formula",                     "Machin's Formula Method",              "Machin's Formula",      calculate_pi_machin },
+  { "Ramanujan's First Series",             "Ramanujan's First Series",             "Ramanujan's Series",    calculate_pi_ramanujan },
+  { "Chudnovsky Algorithm",                 "Chudnovsky's Algorithm",               "Chudnovsky",            calculate_pi_chudnovsky },
+  { "Gauss-Legendre Algorithm",             "Gauss-Legendre Algorithm",             "Gauss-Legendre",        calculate_pi_gauss_legendre },
+  { "Spigot Algorithm",                     "Spigot Algorithm",                     "Spigot",                calculate_pi_spigot },
+  { "Bailey-Borwein-Plouffe (BBP) Formula", "Bailey-Borwein-Plouffe (BBP) formula", "BBP",                   calculate_pi_bbp },
+  { "Borwein's Quartic Algorithm",          "Borwein's Quartic Algorithm",          "Borwein Quartic",       calculate_pi_borwein_quartic }
 };
+
+/**
+ * How many calculation methods there are
+ * @return The number of methods the menu can offer
+ */
+int pi_method_count()
+{
+  return static_cast<int>(sizeof(methods) / sizeof(methods[0]));
+}
+
+/**
+ * The name the selection menu shows for a method
+ * @param method The method number, counted from zero
+ * @return The menu name, or an empty string if the number names nothing
+ */
+const char *pi_method_menu_name(int method)
+{
+  if (method < 0 || method >= pi_method_count())
+  {
+    return "";
+  }
+
+  return methods[method].menu_name;
+}
 
 /**
  * Announces the chosen method and runs it
@@ -607,9 +635,7 @@ methods[] =
  */
 static string run_selected_method(int method, int precision, mpf_class &pi)
 {
-  const int method_count = static_cast<int>(sizeof(methods) / sizeof(methods[0]));
-
-  if (method < 0 || method >= method_count)
+  if (method < 0 || method >= pi_method_count())
   {
     cout << "Invalid method selection." << endl;
     return "";
