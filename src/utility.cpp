@@ -19,29 +19,29 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
-#include <ogcsys.h>
 #include <string>
 
 using namespace std;  // Use the entire std namespace for simplicity
 
 /**
- * Exits the program and attempts to return to the Homebrew Channel or system menu
+ * Ends the program and hands back to whatever launched it
  * Always waits for 3 seconds before exiting
  */
 void exit_WPCPP()
 {
   // Print exit message
-  cout << "\nExiting to Homebrew Channel..." << endl;
+  cout << "\nExiting..." << endl;
 
   // Wait for 3 seconds before exiting
   struct timespec req = {3, 0};  // 3 seconds sleep
   nanosleep(&req, nullptr);
 
-  // Reset the system and return to Homebrew Channel (or system menu if Homebrew isn't available)
-  SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
-
-  // Fallback in case the system reset fails
-  exit(1);
+  // Hand back to whatever started this. Loaders leave a small piece of code at a
+  // known address for exactly that, signed so it cannot be mistaken for whatever
+  // else happens to be in memory, and libogc jumps to it when the program ends.
+  // That returns to the Homebrew Channel, or to a USB or SD loader, or to
+  // whichever one was used, rather than deciding on the user's behalf
+  exit(0);
 }
 
 // Room set aside on the progress line for the estimate. The line is redrawn over
