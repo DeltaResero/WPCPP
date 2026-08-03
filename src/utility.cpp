@@ -17,6 +17,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <cmath>
+#include <algorithm>
 #include <cstdlib>
 #include <ogcsys.h>
 #include <string>
@@ -233,6 +234,51 @@ void progress_begin(int total_steps, const char *unit)
 }
 
 /**
+ * Works out how much longer the work has to run and puts it into words
+ * @param now The clock reading the caller has already taken
+ * @param since_draw How long it has been since the line was last drawn
+ * @return The wait in words, or nothing while there is too little to go on
+ */
+static string progress_time_left_in_words(const struct timeval &now, double since_draw)
+{
+  const double since_start = progress_seconds_between(progress_start, now);
+  const long steps_since_draw = progress_done - progress_done_at_last_draw;
+  const long remaining = progress_total - progress_done;
+
+  // Nothing has moved since the last look, or nothing is left to do, or the fixed
+  // point being measured against is not yet far enough behind to say anything by
+  if (steps_since_draw <= 0 || remaining <= 0
+      || progress_done <= progress_anchor_done
+      || since_start <= progress_anchor_seconds || progress_anchor_seconds <= 0)
+  {
+    return "";
+  }
+
+  // Some methods cost the same on every step while others get steadily dearer,
+  // and guessing which is which was wrong often enough to matter. So measure it
+  // instead. Comparing how much longer the work has run against how many more
+  // steps it has managed says how sharply the cost is climbing, and that one
+  // figure describes both sorts: it comes out at one for steady work and higher
+  // for work that is slowing down. Nothing here is told which method it is in
+  double climb = log(since_start / progress_anchor_seconds)
+    / log(static_cast<double>(progress_done) / static_cast<double>(progress_anchor_done));
+  if (climb < 1.0) { climb = 1.0; }
+  if (climb > 4.0) { climb = 4.0; }
+
+  // Steady work would simply finish in proportion to the steps left. Work that
+  // is climbing has to allow for the steps left being dearer than the ones done
+  const double share_left = static_cast<double>(progress_total) / static_cast<double>(progress_done);
+  const double allowing_for_climb = since_start * (pow(share_left, climb) - 1.0);
+
+  // The nearer end assumes the current speed simply holds, which is right for
+  // steady work and hopeful for anything else
+  const double at_current_speed = remaining / (steps_since_draw / since_draw);
+
+  return progress_estimate_words(min(at_current_speed, allowing_for_climb),
+                                 max(at_current_speed, allowing_for_climb));
+}
+
+/**
  * Records one step of work and redraws the line about once a second. Called from
  * inside the calculation loops, so it does as little as possible: one reading of
  * the clock, which comes straight off the processor's own counter
@@ -265,44 +311,16 @@ bool progress_step()
 
   string estimate;
 
-  const double since_start = progress_seconds_between(progress_start, now);
-  const long steps_since_draw = progress_done - progress_done_at_last_draw;
-  const long remaining = progress_total - progress_done;
-
   // Keep the first drawn line as a fixed point to measure against. Two readings
   // taken a while apart are what makes the shape of the work visible
   if (progress_draws == 1)
   {
-    progress_anchor_seconds = since_start;
+    progress_anchor_seconds = progress_seconds_between(progress_start, now);
     progress_anchor_done = progress_done;
   }
-  else if (steps_since_draw > 0 && remaining > 0
-           && progress_done > progress_anchor_done
-           && since_start > progress_anchor_seconds && progress_anchor_seconds > 0)
+  else
   {
-    // Some methods cost the same on every step while others get steadily dearer,
-    // and guessing which is which was wrong often enough to matter. So measure it
-    // instead. Comparing how much longer the work has run against how many more
-    // steps it has managed says how sharply the cost is climbing, and that one
-    // figure describes both sorts: it comes out at one for steady work and higher
-    // for work that is slowing down. Nothing here is told which method it is in
-    double climb = log(since_start / progress_anchor_seconds)
-      / log(static_cast<double>(progress_done) / static_cast<double>(progress_anchor_done));
-    if (climb < 1.0) { climb = 1.0; }
-    if (climb > 4.0) { climb = 4.0; }
-
-    // Steady work would simply finish in proportion to the steps left. Work that
-    // is climbing has to allow for the steps left being dearer than the ones done
-    const double share_left = static_cast<double>(progress_total) / static_cast<double>(progress_done);
-    const double allowing_for_climb = since_start * (pow(share_left, climb) - 1.0);
-
-    // The nearer end assumes the current speed simply holds, which is right for
-    // steady work and hopeful for anything else
-    const double at_current_speed = remaining / (steps_since_draw / since_draw);
-
-    estimate = progress_estimate_words(
-      (at_current_speed < allowing_for_climb) ? at_current_speed : allowing_for_climb,
-      (at_current_speed < allowing_for_climb) ? allowing_for_climb : at_current_speed);
+    estimate = progress_time_left_in_words(now, since_draw);
   }
 
   progress_draw(estimate);
