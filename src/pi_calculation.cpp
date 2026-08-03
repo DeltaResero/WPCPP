@@ -687,14 +687,10 @@ static void draw_result_page(const string &pi_full_string,
                              int digits_per_page);
 
 /**
- * Shows the digits a screenful at a time, letting the user page through them
- * @param pi_full_string The full result, "3." and every digit asked for
- * @param precision The number of decimal places the result carries
- * @param accuracy_info The report shown above the digits, which also says where
- *        the first wrong digit is so the rest can be coloured
+ * Works out how many digits of Pi one screenful holds
+ * @return The number of digits a page carries
  */
-static void display_pi_pages(const string &pi_full_string, int precision,
-                             const AccuracyReport &accuracy_info)
+static int digits_that_fit_one_page()
 {
   // Rows a page of digits cannot use: up to three lines of accuracy report, the blank
   // line and separator above the digits, the closing rule and blank line below them,
@@ -722,16 +718,28 @@ static void display_pi_pages(const string &pi_full_string, int precision,
   if (console_cols < 20) { console_cols = 75; }
   if (console_rows <= reserved_rows) { console_rows = 27; }
 
-  // How many digits one screenful holds. Pages are counted in digits rather than
-  // characters so that the "3." at the front cannot push the last digit of an
-  // otherwise exact page over onto a page of its own
+  // Pages are counted in digits rather than characters so that the "3." at the front
+  // cannot push the last digit of an otherwise exact page over onto a page of its own
   const int screen_digits = ((console_rows - reserved_rows) * console_cols) - ellipsis_room;
 
   // Hold pages to a round thousand wherever the screen allows it, so that the page
   // number says which digits are on it: page three starts at digit 2001 whatever the
   // TV mode. Letting the screen decide instead would split ten thousand digits into
   // nine pages on NTSC and eight on PAL, with no page starting on a round number
-  const int digits_per_page = screen_digits < 1000 ? screen_digits : 1000;
+  return screen_digits < 1000 ? screen_digits : 1000;
+}
+
+/**
+ * Shows the digits a screenful at a time, letting the user page through them
+ * @param pi_full_string The full result, "3." and every digit asked for
+ * @param precision The number of decimal places the result carries
+ * @param accuracy_info The report shown above the digits, which also says where
+ *        the first wrong digit is so the rest can be coloured
+ */
+static void display_pi_pages(const string &pi_full_string, int precision,
+                             const AccuracyReport &accuracy_info)
+{
+  const int digits_per_page = digits_that_fit_one_page();
 
   int total_pages = (precision + digits_per_page - 1) / digits_per_page;
   if (total_pages == 0) { total_pages = 1; }
