@@ -36,22 +36,27 @@ int main()
   // go besides the digits being displayed
   const mp_bitcnt_t guard_bits = 64;
 
+  // Where the two selection screens open. Held out here rather than inside them so
+  // that a screen left and returned to shows the last answer given to it, which is
+  // what makes going back a screen worth doing
+  int method = 0;
+  int precision = 50;
+
   // Main loop to keep the program running until the user decides to exit
   while (true)
   {
     // Prompt the user to select a method for calculating Pi
-    int method = method_selection_menu();
+    method = method_selection_menu(method);
 
     // Stay with that method for as long as calculations keep being cancelled.
     // Someone who stops one has nearly always asked for more digits than they meant
     // rather than picked the wrong method, so the precision screen is where to land
     while (true)
     {
-      int precision = precision_selection_menu();
-
-      // The precision screen hands back nothing when the user backs out of it,
-      // which is the way back to the method list
-      if (precision < 1)
+      // Backing out of the precision screen is the way back to the method list. It
+      // leaves the figure it was showing behind either way, so the digits dialled
+      // in before changing method are still there on the way back through
+      if (!precision_selection_menu(precision))
       {
         break;
       }

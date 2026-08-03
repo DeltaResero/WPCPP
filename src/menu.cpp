@@ -23,12 +23,14 @@ using namespace std;  // Use the entire std namespace for simplicity
 /**
  * Displays a menu and allows the user to navigate and select options
  * The options are navigated using Left/Right on the D-pad, and 'A' selects the option
+ * @param start_index Which method the list opens on, so that coming back to this
+ *        screen lands where it was left rather than at the top every time
  * @return The index of the selected option
  */
-int method_selection_menu()
+int method_selection_menu(int start_index)
 {
   const int num_methods = pi_method_count();
-  int selected_index = 0;
+  int selected_index = start_index;
 
   // Clear the screen and display instructions
   cout << "\x1b[2J"; // ANSI escape code to clear the screen
@@ -95,13 +97,17 @@ int method_selection_menu()
 /**
  * Displays a precision selection screen to allow the user to choose the number
  * of decimal places for the Pi calculation
- * @return The selected precision, between 1 and MAX_PI_DIGITS decimal places,
- *         or zero if the user went back to the method selection instead
+ * @param precision Opens on this figure and is left holding whatever it was
+ *        adjusted to, so that a screen backed out of still says where it got to
+ * @return True when a precision was confirmed, false when the user went back to
+ *         the method selection instead
  */
-int precision_selection_menu()
+bool precision_selection_menu(int &precision)
 {
-  int precision = 50;  // Start with default precision
-  int step_size = 1;   // Initial step size for adjusting precision
+  // The step always opens at one however large the figure above it is. A step
+  // carried over from a previous visit would turn the first press of Left or
+  // Right into a jump of hundreds, which is not what that press looks like
+  int step_size = 1;
 
   // Digits in the largest number either field below can show. The status line is
   // redrawn over itself, so both numbers are padded to this width to keep the line
@@ -181,14 +187,14 @@ int precision_selection_menu()
     // Confirm selection when 'A' button is pressed
     if (button_a_down)
     {
-      return precision;  // Return the selected precision
+      return true;
     }
 
-    // Go back a screen. Zero is not a precision anyone can ask for, so it says
-    // the user left without choosing one without needing a second return value
+    // Go back a screen. The figure stays as the user left it either way, since
+    // someone who backs out to change method rarely wants the digits forgotten
     if (button_b_down)
     {
-      return 0;
+      return false;
     }
 
     // Check if 'Home' button (Wii Remote) or 'Start' button (GameCube) is pressed to exit

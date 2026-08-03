@@ -12,8 +12,8 @@
 #ifndef MENU_HPP
 #define MENU_HPP
 
-int method_selection_menu();
-int precision_selection_menu();
+int method_selection_menu(int start_index);
+bool precision_selection_menu(int &precision);
 
 #endif
 
