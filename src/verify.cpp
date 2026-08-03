@@ -59,35 +59,30 @@ using namespace std;  // Use the entire std namespace for simplicity
  */
 static double power_of_sixteen_mod(double power, double divisor)
 {
-  // Powers of two, built once and kept for every later call
-  static double two_powers[25];
-  static bool table_ready = false;
-
-  if (!table_ready)
-  {
-    two_powers[0] = 1.0;
-    for (int i = 1; i < 25; i++)
-    {
-      two_powers[i] = 2.0 * two_powers[i - 1];
-    }
-    table_ready = true;
-  }
-
   // Every whole number leaves a remainder of nothing against one
   if (divisor == 1.0)
   {
     return 0.0;
   }
 
-  // Find the largest power of two that does not overshoot the exponent, which
-  // is where the walk through the exponent's bits has to start
+  // Climb the powers of two until one overshoots the exponent, which is where
+  // the walk through the exponent's bits has to start. The count stops at 25
+  // because the exponents this is asked for never reach two to the twenty-fifth.
+  // Every value here is a power of two well inside what a double holds exactly,
+  // so doubling and halving are both exact and nothing is rounded on the way
   int steps = 0;
-  while (steps < 25 && two_powers[steps] <= power)
+  double step_size = 1.0;
+  while (steps < 25 && step_size <= power)
   {
+    step_size = 2.0 * step_size;
     steps++;
   }
 
-  double step_size = two_powers[steps > 0 ? steps - 1 : 0];
+  // The loop leaves step_size one power too high, unless it never ran at all
+  if (steps > 0)
+  {
+    step_size = 0.5 * step_size;
+  }
   double remaining = power;
   double result = 1.0;
 
