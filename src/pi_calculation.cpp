@@ -346,6 +346,70 @@ mpf_class calculate_pi_gauss_legendre(int precision)
 }
 
 /**
+ * Calculates Pi using Borwein's quartic algorithm
+ * Each pass roughly quadruples the number of correct digits, where the
+ * Gauss-Legendre algorithm above only doubles them, so this reaches a given
+ * precision in about half as many passes
+ * @param precision The number of decimal places of Pi to calculate
+ * @return The calculated value of Pi using Borwein's quartic algorithm
+ */
+mpf_class calculate_pi_borwein_quartic(int precision)
+{
+  // Starting values for the algorithm
+  mpf_class a = mpf_class(6) - 4 * sqrt(mpf_class(2));
+  mpf_class y = sqrt(mpf_class(2)) - 1;
+
+  // Correct digits roughly quadruple each pass, so the count grows with the
+  // logarithm of the precision to base four. One spare pass covers the fact
+  // that the first pass starts from a single correct digit rather than four.
+  // Spare passes are not cheap here, since each one costs two square roots at
+  // the full working precision
+  int iterations = static_cast<int>(ceil(log2(precision) / 2.0)) + 1;
+  if (iterations < 2)
+  {
+    iterations = 2;  // The smallest precisions still need a pass to refine
+  }
+
+  progress_begin(iterations, "pass");
+
+  for (int i = 0; i < iterations; ++i)
+  {
+    progress_step();
+
+    mpf_class y_squared = y * y;
+    mpf_class y_fourth = y_squared * y_squared;
+
+    // The fourth root of 1 - y^4, taken as two square roots. This is the step
+    // the algorithm is named for. Taking a single square root here still looks
+    // plausible and still converges, just to the wrong number
+    mpf_class root = sqrt(1 - y_fourth);
+    root = sqrt(root);
+
+    mpf_class y_next = (1 - root) / (1 + root);
+
+    mpf_class one_plus_y = 1 + y_next;
+    mpf_class one_plus_y_pow_4;
+    mpf_pow_ui(one_plus_y_pow_4.get_mpf_t(), one_plus_y.get_mpf_t(), 4);
+
+    // The exponent is 2i + 3, so the first pass uses 8. Starting it at 4
+    // instead leaves the result wrong by an amount no extra precision fixes
+    mpf_class two_power;
+    mpf_pow_ui(two_power.get_mpf_t(), mpf_class(2).get_mpf_t(),
+               (2UL * static_cast<unsigned long>(i)) + 3);
+
+    mpf_class correction = two_power * y_next * (1 + y_next + (y_next * y_next));
+
+    a = (a * one_plus_y_pow_4) - correction;
+    y = y_next;
+  }
+
+  progress_end();
+
+  // Final step: Pi is the reciprocal of a
+  return 1 / a;
+}
+
+/**
  * Calculates Pi using the Spigot algorithm
  * The Spigot algorithm calculates Pi one digit at a time using a specific sequence of operations,
  * and it is known for its ability to output the digits of Pi without needing high memory or large precision for intermediate results
@@ -562,6 +626,11 @@ void calculate_and_display_pi(int method, int precision)
       cout << "Calculating Pi using Bailey-Borwein-Plouffe (BBP) formula..." << endl;
       method_name = "BBP";
       pi = calculate_pi_bbp(precision);
+      break;
+    case 7:
+      cout << "Calculating Pi using Borwein's Quartic Algorithm..." << endl;
+      method_name = "Borwein Quartic";
+      pi = calculate_pi_borwein_quartic(precision);
       break;
     default:
       cout << "Invalid method selection." << endl;

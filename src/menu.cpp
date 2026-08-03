@@ -34,7 +34,8 @@ int method_selection_menu()
     "Chudnovsky Algorithm",
     "Gauss-Legendre Algorithm",
     "Spigot Algorithm",
-    "Bailey-Borwein-Plouffe (BBP) Formula"
+    "Bailey-Borwein-Plouffe (BBP) Formula",
+    "Borwein's Quartic Algorithm"
   };
 
   int num_methods = sizeof(pi_methods) / sizeof(pi_methods[0]);

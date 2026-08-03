@@ -19,6 +19,7 @@ mpf_class calculate_pi_numerical_integration();
 mpf_class calculate_pi_ramanujan(int precision);
 mpf_class calculate_pi_chudnovsky(int precision);
 mpf_class calculate_pi_gauss_legendre(int precision);
+mpf_class calculate_pi_borwein_quartic(int precision);
 mpf_class calculate_pi_spigot(int precision);
 mpf_class calculate_pi_bbp(int precision);
 void calculate_and_display_pi(int method, int precision);
