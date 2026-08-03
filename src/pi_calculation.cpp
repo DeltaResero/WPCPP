@@ -410,6 +410,45 @@ mpf_class calculate_pi_borwein_quartic(int precision)
 }
 
 /**
+ * Advances the working array one place and hands back what falls off the top
+ * @param A The working array, updated in place
+ * @param len How many places the array holds
+ * @return The quotient carried out, which the next digit is drawn from
+ */
+static int spigot_next_quotient(std::vector<int> &A, int len)
+{
+  int q = 0;  // `q` will store the quotient for the current step
+
+  for (int i = len; i > 0; --i)
+  {
+    // Calculate new value for A[i-1] by shifting and adding the quotient from the previous step
+    int x = 10 * A[i - 1] + q * i;
+    A[i - 1] = x % (2 * i - 1);  // Store the remainder back in A[i-1]
+    q = x / (2 * i - 1);  // Store the quotient to pass on to the next element
+  }
+
+  return q;
+}
+
+/**
+ * Writes out a run of nines that was held back to see whether a carry would
+ * turn them all to zeros, and moves the place value along past them
+ * @param pi The value being built up
+ * @param multiplier Place value of the next digit, moved along once per nine
+ * @param ten Ten at the working precision, which the place value divides by
+ * @param nines How many nines were held back, which may be none
+ */
+static void add_pending_nines(mpf_class &pi, mpf_class &multiplier,
+                              const mpf_class &ten, int nines)
+{
+  for (int k = 0; k < nines; ++k)
+  {
+    pi += 9 * multiplier;  // Add each 9 to Pi
+    multiplier /= ten;  // Move the decimal place for each 9
+  }
+}
+
+/**
  * Calculates Pi using the Spigot algorithm
  * The Spigot algorithm calculates Pi one digit at a time using a specific sequence of operations,
  * and it is known for its ability to output the digits of Pi without needing high memory or large precision for intermediate results
@@ -449,16 +488,7 @@ mpf_class calculate_pi_spigot(int precision)
   {
     if (!progress_step()) { break; }
 
-    int q = 0;  // `q` will store the quotient for the current step
-
-    // Process each element of array `A` to generate the next digit
-    for (int i = len; i > 0; --i)
-    {
-      // Calculate new value for A[i-1] by shifting and adding the quotient from the previous step
-      int x = 10 * A[i - 1] + q * i;
-      A[i - 1] = x % (2 * i - 1);  // Store the remainder back in A[i-1]
-      q = x / (2 * i - 1);  // Store the quotient to pass on to the next element
-    }
+    int q = spigot_next_quotient(A, len);
 
     A[0] = q % 10;  // Extract the first digit of the new quotient
     q = q / 10;  // Prepare for the next step by shifting `q`
@@ -491,11 +521,7 @@ mpf_class calculate_pi_spigot(int precision)
       multiplier /= ten;  // Move the decimal place to the next position
 
       // Handle rounding if there were any earlier 9's
-      for (int k = 0; k < nines; ++k)
-      {
-        pi += 9 * multiplier;  // Add each 9 to Pi
-        multiplier /= ten;  // Move the decimal place for each 9
-      }
+      add_pending_nines(pi, multiplier, ten, nines);
 
       predigit = q;  // Set predigit to the current digit
       nines = 0;  // Reset nines count
@@ -508,14 +534,7 @@ mpf_class calculate_pi_spigot(int precision)
   pi += predigit * multiplier;
 
   // If there were trailing 9's that were skipped, handle them here
-  if (nines > 0)
-  {
-    for (int k = 0; k < nines; ++k)
-    {
-      pi += 9 * multiplier;
-      multiplier /= ten;
-    }
-  }
+  add_pending_nines(pi, multiplier, ten, nines);
 
   return pi;  // Return the calculated value of Pi
 }
