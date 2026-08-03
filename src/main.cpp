@@ -39,23 +39,37 @@ int main()
   // Main loop to keep the program running until the user decides to exit
   while (true)
   {
-    // Prompt the user to select a method for calculating Pi and a desired precision level
+    // Prompt the user to select a method for calculating Pi
     int method = method_selection_menu();
-    int precision = precision_selection_menu();
 
-    // The precision screen hands back nothing when the user backs out of it, which
-    // sends them round to the method they came from rather than into a calculation
-    if (precision < 1)
+    // Stay with that method for as long as calculations keep being cancelled.
+    // Someone who stops one has nearly always asked for more digits than they meant
+    // rather than picked the wrong method, so the precision screen is where to land
+    while (true)
     {
-      continue;
+      int precision = precision_selection_menu();
+
+      // The precision screen hands back nothing when the user backs out of it,
+      // which is the way back to the method list
+      if (precision < 1)
+      {
+        break;
+      }
+
+      // Dynamically set GMP precision (number of bits) based on user input of how many digits of pi they want to calculate
+      // 3.32193 bits per decimal place is an approximation of log2(10)
+      mpf_set_default_prec(static_cast<mp_bitcnt_t>(precision * 3.32193) + guard_bits);
+
+      // Calculate Pi using the selected method and precision, then display the result
+      const bool cancelled = calculate_and_display_pi(method, precision);
+
+      // A calculation that ran to the end has had its results read and closed, so
+      // the method list comes back around for the next one
+      if (!cancelled)
+      {
+        break;
+      }
     }
-
-    // Dynamically set GMP precision (number of bits) based on user input of how many digits of pi they want to calculate
-    // 3.32193 bits per decimal place is an approximation of log2(10)
-    mpf_set_default_prec(static_cast<mp_bitcnt_t>(precision * 3.32193) + guard_bits);
-
-    // Calculate Pi using the selected method and precision, then display the result
-    calculate_and_display_pi(method, precision);
   }
 
   return 0;  // This point should never be reached, as the loop is infinite

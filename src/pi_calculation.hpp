@@ -24,7 +24,7 @@ mpf_class calculate_pi_spigot(int precision);
 mpf_class calculate_pi_bbp(int precision);
 int pi_method_count();
 const char *pi_method_menu_name(int method);
-void calculate_and_display_pi(int method, int precision);
+bool calculate_and_display_pi(int method, int precision);
 
 #endif
 

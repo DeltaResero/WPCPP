@@ -11,6 +11,7 @@
 
 #include "utility.hpp"
 #include "verify.hpp"
+#include "input.hpp"
 #include <iostream>
 #include <iomanip>
 #include <time.h>
@@ -61,8 +62,10 @@ static long progress_anchor_done = 0;
 static int progress_count_width = 1;
 static size_t progress_line_width = 0;
 static bool progress_running = false;
+static bool progress_cancel_asked = false;
 static struct timeval progress_start;
 static struct timeval progress_last_draw;
+static struct timeval progress_last_poll;
 
 /**
  * Measures the gap between two readings of the clock
@@ -167,6 +170,39 @@ static void progress_draw(const string &estimate)
 }
 
 /**
+ * Reads the controllers a few times a second while work is going on, so that a
+ * long calculation can be cancelled or exited. The calculations never reach the
+ * input code themselves, so without this the controllers go unread for as long
+ * as the work lasts and the only way out is the console's power switch
+ * @param now The clock reading the caller has already taken
+ */
+static void progress_poll_buttons(const struct timeval &now)
+{
+  // A tenth of a second is often enough to catch a button pressed and let go of,
+  // and rare enough to cost nothing. Reading the controllers on every step would
+  // cost more than the arithmetic being reported, since a step can be one digit
+  if (progress_seconds_between(progress_last_poll, now) < 0.1)
+  {
+    return;
+  }
+
+  progress_last_poll = now;
+  poll_inputs();
+
+  // Leaving the program outright, the same buttons that leave every other screen
+  if (is_button_just_pressed(PAD_BUTTON_START, WPAD_BUTTON_HOME))
+  {
+    exit_WPCPP();
+  }
+
+  // Cancelling, the same button that goes back a screen everywhere else
+  if (is_button_just_pressed(PAD_BUTTON_B, WPAD_BUTTON_B))
+  {
+    progress_cancel_asked = true;
+  }
+}
+
+/**
  * Starts reporting progress. Draws straight away rather than waiting, so that
  * pressing 'A' is answered immediately even when the work turns out to be quick
  * @param total_steps How many steps the work is expected to take
@@ -188,7 +224,9 @@ void progress_begin(int total_steps, const char *unit)
 
   gettimeofday(&progress_start, nullptr);
   progress_last_draw = progress_start;
+  progress_last_poll = progress_start;
   progress_running = true;
+  progress_cancel_asked = false;
 
   progress_draw("");
   progress_draws = 1;
@@ -198,22 +236,31 @@ void progress_begin(int total_steps, const char *unit)
  * Records one step of work and redraws the line about once a second. Called from
  * inside the calculation loops, so it does as little as possible: one reading of
  * the clock, which comes straight off the processor's own counter
+ * @return False once the user has cancelled, which the loop that called this is
+ *         expected to answer by stopping
  */
-void progress_step()
+bool progress_step()
 {
   if (!progress_running)
   {
-    return;
+    return true;
   }
 
   progress_done++;
 
   struct timeval now;
   gettimeofday(&now, nullptr);
+
+  progress_poll_buttons(now);
+  if (progress_cancel_asked)
+  {
+    return false;
+  }
+
   const double since_draw = progress_seconds_between(progress_last_draw, now);
   if (since_draw < 1.0)
   {
-    return;
+    return true;
   }
 
   string estimate;
@@ -264,6 +311,17 @@ void progress_step()
   progress_draws++;
   progress_last_draw = now;
   progress_done_at_last_draw = progress_done;
+
+  return true;
+}
+
+/**
+ * Says whether the calculation that has just ended was cancelled or finished
+ * @return True when the user stopped it part way through
+ */
+bool progress_cancelled()
+{
+  return progress_cancel_asked;
 }
 
 /**

@@ -68,7 +68,7 @@ mpf_class arctan(const mpf_class &x, int precision)
     result += term;  // Add the current term to the result
     n += 2;  // Increase n by 2 (since the series uses odd numbers)
     term *= -x2 * (n - 2) / n;  // Compute the next term efficiently without recalculating powers
-    progress_step();
+    if (!progress_step()) { break; }
   }
 
   return result;  // Return the final result of the arctangent
@@ -160,7 +160,7 @@ mpf_class calculate_pi_numerical_integration()
       sum_gmp += batch_sum;  // Accumulate in GMP
       batch_sum = 0.0;  // Reset batch sum for the next batch
       batch_count = 0;  // Reset counter
-      progress_step();
+      if (!progress_step()) { break; }
     }
   }
 
@@ -205,7 +205,7 @@ mpf_class calculate_pi_ramanujan(int precision)
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     // Calculate the numerator: (4k)! * (1103 + 26390k)
     mpf_class numerator = gmp_factorial(4 * k) * (1103 + 26390 * k);
@@ -254,7 +254,7 @@ mpf_class calculate_pi_chudnovsky(int precision)
   // Loop through each term in the series expansion
   for (int k = 0; k < iterations; ++k)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     // Calculate the numerator: (6k)! * (13591409 + 545140134k)
     // Work the multiplier out as a whole number rather than in plain ints. Once k
@@ -319,7 +319,7 @@ mpf_class calculate_pi_gauss_legendre(int precision)
   // Loop through the iterative process to refine a, b, t, and p
   for (int i = 0; i < iterations; ++i)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     // Calculate the next value of a as the average of a and b
     mpf_class a_next = (a + b) / 2;
@@ -374,7 +374,7 @@ mpf_class calculate_pi_borwein_quartic(int precision)
 
   for (int i = 0; i < iterations; ++i)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     mpf_class y_squared = y * y;
     mpf_class y_fourth = y_squared * y_squared;
@@ -447,7 +447,7 @@ mpf_class calculate_pi_spigot(int precision)
   // Loop through each digit position to calculate the digits of Pi
   for (int j = 1; j <= N; ++j)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     int q = 0;  // `q` will store the quotient for the current step
 
@@ -538,7 +538,7 @@ mpf_class calculate_pi_bbp(int precision)
   // Loop through each term in the BBP series to accumulate the value of Pi
   for (int k = 0; k < iterations; ++k)
   {
-    progress_step();
+    if (!progress_step()) { break; }
 
     // Compute the current term of the BBP series.
     mpf_class term = (mpf_class(4) / (8 * k + 1))  // The first part of the BBP term
@@ -642,6 +642,7 @@ static string run_selected_method(int method, int precision, mpf_class &pi)
   }
 
   cout << "Calculating Pi using " << methods[method].announcement << "..." << endl;
+  cout << "Press 'B' to cancel." << endl;
   pi = methods[method].calculate(precision);
 
   return methods[method].short_name;
@@ -912,8 +913,10 @@ static void draw_result_page(const string &pi_full_string,
  * Times the Pi calculation and displays a detailed, paginated report.
  * @param method The method to use for Pi calculation.
  * @param precision The number of decimal places for the Pi calculation.
+ * @return True when the calculation was cancelled part way through, which
+ *         leaves the method still chosen rather than needing picking again
  */
-void calculate_and_display_pi(int method, int precision)
+bool calculate_and_display_pi(int method, int precision)
 {
   // Clear the screen before displaying the results
   cout << "\x1b[2J";  // ANSI escape code to clear the screen
@@ -931,7 +934,14 @@ void calculate_and_display_pi(int method, int precision)
   const string method_name = run_selected_method(method, precision, pi);
   if (method_name.empty())
   {
-    return;  // Nothing was calculated, so there is nothing to report
+    return false;  // Nothing was calculated, so there is nothing to report
+  }
+
+  // A cancelled calculation leaves a partial figure that is not an answer to
+  // anything, so it is dropped without being timed, checked or shown
+  if (progress_cancelled())
+  {
+    return true;
   }
 
   // Stop the timer now that calculation is complete
@@ -990,6 +1000,7 @@ void calculate_and_display_pi(int method, int precision)
   }
 
   display_pi_pages(format_pi(pi, precision), precision, accuracy_info);
+  return false;
 }
 
 // EOF
