@@ -95,6 +95,61 @@ int method_selection_menu(int start_index)
 }
 
 /**
+ * Moves the two figures on the precision screen by whatever the D-pad and the
+ * triggers were just doing. Both are held inside their limits here, so the
+ * screen around this never has to check what it is about to show
+ * @param precision The figure being adjusted, kept between 1 and MAX_PI_DIGITS
+ * @param step_size How far Left and Right move it, kept between 1 and the cap
+ */
+static void apply_precision_buttons(int &precision, int &step_size)
+{
+  bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
+  bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
+  bool button_l_down = is_button_just_pressed(PAD_TRIGGER_L, WPAD_BUTTON_MINUS);
+  bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
+
+  // Cycle the step size down one power of ten
+  if (button_l_down)
+  {
+    if (step_size > 1)
+    {
+      step_size /= 10;
+    }
+  }
+
+  // Cycle the step size up one power of ten. The ladder stops at the cap itself,
+  // since a step larger than the whole range could only ever land on the two ends.
+  // Growing it with the cap is what keeps the top reachable in a few presses
+  if (button_r_down)
+  {
+    if (step_size * 10 <= MAX_PI_DIGITS)
+    {
+      step_size *= 10;
+    }
+  }
+
+  // Decrease precision, ensuring it stays >= 1
+  if (button_left_down)
+  {
+    precision -= step_size;
+    if (precision < 1)
+    {
+      precision = 1;
+    }
+  }
+
+  // Increase precision, ensuring it stays within the cap
+  if (button_right_down)
+  {
+    precision += step_size;
+    if (precision > MAX_PI_DIGITS)
+    {
+      precision = MAX_PI_DIGITS;
+    }
+  }
+}
+
+/**
  * Displays a precision selection screen to allow the user to choose the number
  * of decimal places for the Pi calculation
  * @param precision Opens on this figure and is left holding whatever it was
@@ -133,52 +188,10 @@ bool precision_selection_menu(int &precision)
     // Check which buttons have just gone down. is_button_just_pressed reports only
     // the moment a button changes from released to held, so each of these is true for
     // a single pass of the loop no matter how long the button is held down
-    bool button_left_down = is_button_just_pressed(PAD_BUTTON_LEFT, WPAD_BUTTON_LEFT);
-    bool button_right_down = is_button_just_pressed(PAD_BUTTON_RIGHT, WPAD_BUTTON_RIGHT);
-    bool button_l_down = is_button_just_pressed(PAD_TRIGGER_L, WPAD_BUTTON_MINUS);
-    bool button_r_down = is_button_just_pressed(PAD_TRIGGER_R, WPAD_BUTTON_PLUS);
     bool button_a_down = is_button_just_pressed(PAD_BUTTON_A, WPAD_BUTTON_A);
     bool button_b_down = is_button_just_pressed(PAD_BUTTON_B, WPAD_BUTTON_B);
 
-    // Cycle the step size down one power of ten
-    if (button_l_down)
-    {
-      if (step_size > 1)
-      {
-        step_size /= 10;
-      }
-    }
-
-    // Cycle the step size up one power of ten. The ladder stops at the cap itself,
-    // since a step larger than the whole range could only ever land on the two ends.
-    // Growing it with the cap is what keeps the top reachable in a few presses
-    if (button_r_down)
-    {
-      if (step_size * 10 <= MAX_PI_DIGITS)
-      {
-        step_size *= 10;
-      }
-    }
-
-    // Decrease precision, ensuring it stays >= 1
-    if (button_left_down)
-    {
-      precision -= step_size;
-      if (precision < 1)
-      {
-        precision = 1;
-      }
-    }
-
-    // Increase precision, ensuring it stays within the cap
-    if (button_right_down)
-    {
-      precision += step_size;
-      if (precision > MAX_PI_DIGITS)
-      {
-        precision = MAX_PI_DIGITS;
-      }
-    }
+    apply_precision_buttons(precision, step_size);
 
     // Display the current precision and step size
     cout << "\rCurrent Precision: " << setw(field_width) << precision
