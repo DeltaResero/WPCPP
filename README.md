@@ -21,6 +21,18 @@ what precision is asked for. The results screen says so when it happens.
 
 <br>
 
+## Controls
+
+| **Wii Remote** | **GC Controller** | **Function**                             |
+|----------------|-------------------|------------------------------------------|
+| D-Pad ← / →    | D-Pad ← / →       | Choose a method, precision, & turn pages |
+| A              | A                 | Confirm or leave the results             |
+| B              | B                 | Go back a screen or stop a calculation   |
+| - / +          | L / R             | Change the stepping size                 |
+| HOME           | START             | Exit                                     |
+
+<br>
+
 ## How to Build
 
 ### Prerequisites

@@ -2,8 +2,8 @@
 <app version="1">
     <name>Wii Pi Calculator Project +</name>
     <coder>DeltaResero</coder>
-    <version>2.1</version>
-    <release_date>20260802000000</release_date>
+    <version>2.2</version>
+    <release_date>20260803000000</release_date>
     <short_description>Pi Calculator for Wii</short_description>
     <long_description>Calculates pi to a precision of your choosing, using any of several methods, then checks its own answer.
 
